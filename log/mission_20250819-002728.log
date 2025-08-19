@@ -1,0 +1,14 @@
+2025-08-19 00:27:29,815 [INFO] Connecting to drone...
+2025-08-19 00:27:29,819 [INFO] ✅ Drone connected.
+2025-08-19 00:27:29,922 [INFO]  Mission plan loaded.
+2025-08-19 00:27:29,922 [INFO]  Executing action take_off_1: takeoff_from_UGV
+2025-08-19 00:27:51,482 [INFO] 📡 Broadcasted status: {"uav_task_status": {"take_off_1": {"type": "takeoff_from_UGV", "status": "SUCCESS"}, "move_1": {"type": "move_to_location", "status": "PENDING"}, "move_4": {"type": "move_to_location", "status": "PENDING"}, "land_1": {"type": "land_on_UGV", "status": "PENDING"}, "take_off_2": {"type": "takeoff_from_UGV", "status": "PENDING"}, "move_5": {"type": "move_to_location", "status": "PENDING"}, "move_6": {"type": "move_to_location", "status": "PENDING"}, "land_2": {"type": "land_on_UGV", "status": "PENDING"}}}
+2025-08-19 00:27:51,482 [INFO] Time taken to complete take_off_1: 21.56 sec
+2025-08-19 00:27:51,483 [INFO]  Executing action move_1: move_to_location
+2025-08-19 00:28:11,913 [INFO] 📡 Broadcasted status: {"uav_task_status": {"take_off_1": {"type": "takeoff_from_UGV", "status": "SUCCESS"}, "move_1": {"type": "move_to_location", "status": "SUCCESS"}, "move_4": {"type": "move_to_location", "status": "PENDING"}, "land_1": {"type": "land_on_UGV", "status": "PENDING"}, "take_off_2": {"type": "takeoff_from_UGV", "status": "PENDING"}, "move_5": {"type": "move_to_location", "status": "PENDING"}, "move_6": {"type": "move_to_location", "status": "PENDING"}, "land_2": {"type": "land_on_UGV", "status": "PENDING"}}}
+2025-08-19 00:28:11,913 [INFO] Time taken to complete move_1: 20.43 sec
+2025-08-19 00:28:11,913 [INFO]  Executing action move_4: move_to_location
+2025-08-19 00:28:35,460 [INFO] 📡 Broadcasted status: {"uav_task_status": {"take_off_1": {"type": "takeoff_from_UGV", "status": "SUCCESS"}, "move_1": {"type": "move_to_location", "status": "SUCCESS"}, "move_4": {"type": "move_to_location", "status": "SUCCESS"}, "land_1": {"type": "land_on_UGV", "status": "PENDING"}, "take_off_2": {"type": "takeoff_from_UGV", "status": "PENDING"}, "move_5": {"type": "move_to_location", "status": "PENDING"}, "move_6": {"type": "move_to_location", "status": "PENDING"}, "land_2": {"type": "land_on_UGV", "status": "PENDING"}}}
+2025-08-19 00:28:35,461 [INFO] Time taken to complete move_4: 23.55 sec
+2025-08-19 00:28:35,461 [INFO]  Executing action land_1: land_on_UGV
+2025-08-19 00:32:50,653 [WARNING]  Interrupted by user.
