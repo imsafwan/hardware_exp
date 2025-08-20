@@ -1,53 +1,67 @@
 actions:
 
-- type: takeoff_from_UGV
-  ins_id: take_off_1
+  - type: takeoff_from_UGV
+    ins_id: take_off_1
 
 
-- type: move_to_location
-  ins_id: move_1
-  location:
-     lat:  41.870111
-     lon: -87.650272
+  - type: move_to_location
+    ins_id: move_1
+    location:
+      lat:  41.870111
+      lon: -87.650272
+    start_time: 0.0
+    end_time: 5.0
 
-# - type: move_to_location
-#   ins_id: move_2
-#   location:
-#      lat:  41.870132
-#      lon: -87.650127
+  # - type: move_to_location
+  #   ins_id: move_2
+  #   location:
+  #      lat:  41.870132
+  #      lon: -87.650127
 
-# - type: move_to_location
-#   ins_id: move_3
-#   location:
-#      lat:  41.870065
-#      lon: -87.649971
+  # - type: move_to_location
+  #   ins_id: move_3
+  #   location:
+  #      lat:  41.870065
+  #      lon: -87.649971
 
-- type: move_to_location
-  ins_id: move_4
-  location:
-     lat:  41.870000
-     lon: -87.650219
+  - type: move_to_location
+    ins_id: move_4
+    location:
+      lat:  41.870000
+      lon: -87.650219
+    start_time: 5.0
+    end_time: 10.0
 
-- type: land_on_UGV
-  ins_id: land_1
+  - type: land_on_UGV
+    ins_id: land_1
+    start_time: 10.0
+    end_time: 15.0
 
-- type: takeoff_from_UGV
-  ins_id: take_off_2
+  - type: takeoff_from_UGV
+    ins_id: take_off_2
+    start_time: 15.0
+    end_time: 20.0
 
-- type: move_to_location
-  ins_id: move_5
-  location:
-     lat:  41.869975
-     lon: -87.650380
+  - type: move_to_location
+    ins_id: move_5
+    location:
+      lat:  41.869975
+      lon: -87.650380
+    start_time: 20.0
+    end_time: 25.0
 
-- type: move_to_location
-  ins_id: move_6
-  location:
-     lat:  41.869902
-     lon: -87.650290
+  - type: move_to_location
+    ins_id: move_6
+    location:
+      lat:  41.869902
+      lon: -87.650290
+    start_time: 25.0
+    end_time: 30.0
 
-- type: land_on_UGV
-  ins_id: land_2
+  - type: land_on_UGV
+    ins_id: land_2
+    start_time: 30.0
+    end_time: 35.0
 
 
 

@@ -1,39 +1,39 @@
 actions:
-- type: allow_take_off_from_UGV
-  ins_id: take_off_1
-  start_time: 0.0
-  end_time: 5.0
+  - type: allow_take_off_from_UGV
+    ins_id: take_off_1
+    start_time: 0.0
+    end_time: 5.0
 
 
-- type: move_to_location
-  ins_id: move_1
-  location:
-     lat:  41.870000
-     lon: -87.650219
-  start_time: 5.0
-  end_time: 10.0
+  - type: move_to_location
+    ins_id: move_1
+    location:
+      lat:  41.870000
+      lon: -87.650219
+    start_time: 5.0
+    end_time: 10.0
 
-- type: allow_land_on_UGV
-  ins_id: land_1
-  start_time: 10.0
-  end_time: 15.0
+  - type: allow_land_on_UGV
+    ins_id: land_1
+    start_time: 10.0
+    end_time: 15.0
 
-- type: allow_take_off_from_UGV
-  ins_id: take_off_2
-  start_time: 15.0
-  end_time: 20.0
+  - type: allow_take_off_from_UGV
+    ins_id: take_off_2
+    start_time: 15.0
+    end_time: 20.0
 
-- type: move_to_location
-  ins_id: move_2
-  location:
-     lat:  41.869902
-     lon: -87.650290
-  start_time: 20.0
-  end_time: 25.0
+  - type: move_to_location
+    ins_id: move_2
+    location:
+      lat:  41.869902
+      lon: -87.650290
+    start_time: 20.0
+    end_time: 25.0
 
-- type: allow_land_on_UGV
-  ins_id: land_2
-  start_time: 30.0
-  end_time: 35.0
+  - type: allow_land_on_UGV
+    ins_id: land_2
+    start_time: 30.0
+    end_time: 35.0
 
 

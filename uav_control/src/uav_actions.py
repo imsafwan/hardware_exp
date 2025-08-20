@@ -139,7 +139,7 @@ async def land(drone):
 
 # ------------------- Vision-Based Landing ------------------- #
 
-async def vision_landing(drone, camera_index="/dev/video10", target_align_altitude=2.5):
+async def vision_landing(drone, camera_index="/dev/video0", target_align_altitude=2.5):
     print(" Starting vision-based landing...")
 
     # --- Camera setup ---

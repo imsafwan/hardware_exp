@@ -27,7 +27,7 @@ def load_namespace():
 
 # ==== UDP Broadcast ====
 def broadcast_status(full_status):
-    BROADCAST_IP = "175.20.10.15"
+    BROADCAST_IP = "255.255.255.255"
     UAV_LISTEN_PORT = 5006
     C_LISTEN_PORT = 5056
     try:
@@ -183,8 +183,22 @@ class UGVActionRunner(Node):
             elif action.get('type') == 'allow_land_on_UGV':
                 success = True
 
-                
-                
+                # Wait for UAV status broadcast and check if land is allowed
+                # self.get_logger().info(f"Waiting for land allowed for action: {action_id}")
+                # while True:
+                #     data, addr = sock.recvfrom(1024)
+                #     try:
+                #         msg = json.loads(data.decode())
+                #         uav_status.update(msg)
+                #         status = uav_status["uav_task_status"].get(action_id, {}).get("status")
+                #         if status == "SUCCESS":
+                #             self.get_logger().info(f"Land allowed for action: {action_id}")
+                #             break
+                #         else:
+                #             self.get_logger().info(f"Waiting for land success for {action_id}, current status: {status}")
+                #     except Exception as e:
+                #         self.get_logger().warn(f"Error parsing UAV status: {e}")
+                # continue
 
             else:
                 self.get_logger().warn(f"Unknown action type: {action.get('type')}. Skipping.")
