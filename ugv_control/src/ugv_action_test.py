@@ -27,7 +27,7 @@ def load_namespace():
 
 # ==== UDP Broadcast ====
 def broadcast_status(full_status):
-    BROADCAST_IP = "175.20.10.15"
+    BROADCAST_IP = "192.168.10.15" # "255.255.255.255"
     UAV_LISTEN_PORT = 5006
     C_LISTEN_PORT = 5056
     try:
@@ -37,6 +37,7 @@ def broadcast_status(full_status):
         sock.sendto(msg.encode(), (BROADCAST_IP, UAV_LISTEN_PORT))
         sock.sendto(msg.encode(), (BROADCAST_IP, C_LISTEN_PORT))
         sock.close()
+        print('broadcasted')
         #log.info(f"📡 Broadcasted status: {msg}")
     except Exception as e:
         print(f"❌ Failed to broadcast status: {e}")
@@ -135,6 +136,7 @@ class UGVActionRunner(Node):
 
             if action.get('type') == 'allow_take_off_from_UGV':
                 self.get_logger().info(f"Waiting for takeoff allowed for action: {action_id}")
+                #success = True
                 start_time = time.time()
 
                 while True:
@@ -159,8 +161,9 @@ class UGVActionRunner(Node):
                             success = False               
                     except Exception as e:
                         self.get_logger().warn(f" Error parsing UAV status: {e}")
-                        success = False  
+                        success = False 
                 
+                                                        
 
 
             elif action.get('type') == 'move_to_location':
@@ -183,8 +186,22 @@ class UGVActionRunner(Node):
             elif action.get('type') == 'allow_land_on_UGV':
                 success = True
 
-                
-                
+                # Wait for UAV status broadcast and check if land is allowed
+                # self.get_logger().info(f"Waiting for land allowed for action: {action_id}")
+                # while True:
+                #     data, addr = sock.recvfrom(1024)
+                #     try:
+                #         msg = json.loads(data.decode())
+                #         uav_status.update(msg)
+                #         status = uav_status["uav_task_status"].get(action_id, {}).get("status")
+                #         if status == "SUCCESS":
+                #             self.get_logger().info(f"Land allowed for action: {action_id}")
+                #             break
+                #         else:
+                #             self.get_logger().info(f"Waiting for land success for {action_id}, current status: {status}")
+                #     except Exception as e:
+                #         self.get_logger().warn(f"Error parsing UAV status: {e}")
+                # continue
 
             else:
                 self.get_logger().warn(f"Unknown action type: {action.get('type')}. Skipping.")
@@ -205,7 +222,7 @@ class UGVActionRunner(Node):
 def main():
     rclpy.init()
     # Set your map origin here (lat, lon)
-    map_origin = (41.870046006538765, -87.65035099999997)  # Example, replace with your real map origin
+    map_origin = (41.86996889940987,  -87.65044364173002)  # Example, replace with your real map origin
     
     script_dir = os.path.dirname(os.path.abspath(__file__))
     actions_yaml = os.path.join(script_dir, '../config/ugv_actions.yaml')

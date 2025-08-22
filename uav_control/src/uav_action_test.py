@@ -158,7 +158,7 @@ async def run():
                         status = ugv_status["ugv_task_status"].get(action_id, {}).get("status")
 
                         if status == "SUCCESS":
-                            success = await  land(drone) #vision_landing(drone)
+                            success = await land(drone)    #vision_landing(drone)
                             break
                         else:
                             success = False               
