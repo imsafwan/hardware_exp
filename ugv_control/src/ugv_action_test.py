@@ -27,7 +27,7 @@ def load_namespace():
 
 # ==== UDP Broadcast ====
 def broadcast_status(full_status):
-    BROADCAST_IP = "192.168.10.15" # "255.255.255.255"
+    BROADCAST_IP = "192.168.10.255"  # "172.20.10.15" # "255.255.255.255"
     UAV_LISTEN_PORT = 5006
     C_LISTEN_PORT = 5056
     try:

@@ -139,7 +139,7 @@ async def land(drone):
 
 # ------------------- Vision-Based Landing ------------------- #
 
-async def vision_landing(drone, camera_index="/dev/video0", target_align_altitude=2.5):
+async def vision_landing(drone, camera_index="/dev/video0", target_align_altitude=3.0):
     print(" Starting vision-based landing...")
 
     # --- Camera setup ---
@@ -202,7 +202,7 @@ async def vision_landing(drone, camera_index="/dev/video0", target_align_altitud
         else:
             print("🔍 Marker not detected, holding...")
             await drone.offboard.set_velocity_body(VelocityBodyYawspeed(0, 0, 0, 0))
-        cv2.imshow("Camera", frame)
+        #cv2.imshow("Camera", frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             print(" Interrupted by user")
