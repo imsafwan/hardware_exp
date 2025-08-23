@@ -16,6 +16,8 @@ cd ~/ugv_control/src
 
 4. Run UGV's code:
 ``` bash
-python3 ugv_action_test.py 
+./ugv_task.sh
 ```
 
+- This runs the ```ugv_action_test_v3.py``` to execute the actions.
+- It also runs ```task_status_broadcaster.py``` that broadcasts actions' statuses for coordination between UAV and UGV.

@@ -13,7 +13,11 @@ Resatrting the drone will solve this.
  
 
 3. Run UAV's code:
+
 ``` bash
-python3 uav_action_test.py 
+./uav_task.sh
 ```
+
+- This runs the ```uav_action_test_v3.py``` to execute the actions.
+- It also runs ```task_status_broadcaster.py``` that broadcasts actions' statuses for coordination between UAV and UGV.
 
