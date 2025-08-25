@@ -7,8 +7,8 @@ actions:
   - type: move_to_location
     ins_id: move_1
     location:
-      lat: 41.870040
-      lon: -87.650356
+      lat: 41.870007
+      lon: -87.650315
     start_time: 5.0
     end_time: 10.0
 
@@ -16,4 +16,20 @@ actions:
     ins_id: land_1
     start_time: 10.0
     end_time: 15.0
+
+  - type: allow_take_off_from_UGV
+    ins_id: take_off_2
+    start_time: 0.0
+    end_time: 5.0
+
+  
+  - type: move_to_location
+    ins_id: move_2
+    location:
+      lat: 41.870021
+      lon: -87.650211
+
+  
+  - type: allow_land_on_UGV
+    ins_id: land_2
 

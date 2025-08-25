@@ -24,7 +24,7 @@ async def anext(aiter):
 
 
 async def takeoff(drone, altitude=10.0):
-    tolerance = 0.3
+    tolerance = 0.5
     await drone.action.set_takeoff_altitude(altitude)
     await drone.action.arm()
     await drone.action.takeoff()

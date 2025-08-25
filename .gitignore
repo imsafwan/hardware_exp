@@ -11,6 +11,8 @@ log/
 # Temp status/runtime files
 tmp/
 
+rosbag/
+
 # Virtual environments
 venv/
 .env/

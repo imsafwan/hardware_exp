@@ -21,6 +21,20 @@ UGV_STATUS_FILE = os.path.join(TMP_DIR, "ugv_status.json")
 
 
 
+# Load namespace dynamically from YAML
+def load_namespace():
+    yaml_path = os.path.expanduser("~/clearpath/robot.yaml")  # Path to your YAML file
+    try:
+        with open(yaml_path, 'r') as file:
+            config = yaml.safe_load(file)
+            return config['system']['ros2']['namespace']
+    except Exception as e:
+        print(f"Error loading namespace from YAML: {e}")
+        return "default_ns"  # Fallback namespace
+    
+
+
+
 def update_status(ugv_task_status):
     """Write UGV status JSON file (read by broadcaster)."""
     try:
@@ -49,8 +63,12 @@ class UGVActionRunner(Node):
         self.utm_origin_easting = utm_x
         self.utm_origin_northing = utm_y
         self.utm_zone_number = zone_number
-
-        self.nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+        
+        namespace = load_namespace()
+        self.namespace = namespace
+        self.get_logger().info(f"Using namespace: {namespace}")
+        self.nav_client = ActionClient(self, NavigateToPose, f'{namespace}/navigate_to_pose')
+        #self.nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 
     def send_navigation_goal(self, x, y):
         goal_msg = NavigateToPose.Goal()
@@ -62,6 +80,7 @@ class UGVActionRunner(Node):
 
         self.get_logger().info(f"Sending Goal to Nav2: X={x}, Y={y}")
 
+        # Wait for the action server asynchronously
         if not self.nav_client.wait_for_server(timeout_sec=10.0):
             self.get_logger().error("Action server not available! Navigation goal aborted.")
             return False
@@ -76,7 +95,16 @@ class UGVActionRunner(Node):
         get_result_future = goal_handle.get_result_async()
         rclpy.spin_until_future_complete(self, get_result_future)
         result = get_result_future.result()
-        return result and result.status == 4
+        if result and result.status == 4:  # STATUS_SUCCEEDED
+            self.get_logger().info("Navigation Goal Reached!")
+            return True
+        elif result:
+            self.get_logger().error(f"Navigation Failed! Status: {result.status}")
+            return False
+        else:
+            self.get_logger().error("Navigation Failed! No result returned.")
+            return False
+
 
     def run_actions(self):
         ugv_task_status = {}
@@ -102,10 +130,11 @@ class UGVActionRunner(Node):
             if action["type"] == "allow_take_off_from_UGV":
                 self.get_logger().info(f"Waiting for UAV to take off: {action_id}")
                 start_time = time.time()
+                #success = True
                 #sock_uav.settimeout(1.0)
                 while True:
                         
-                        if time.time() - start_time > 120:
+                        if time.time() - start_time > 600: # timeout
                             self.get_logger().error(f"⏳ Timeout for {action_id}")
                             break
                         
@@ -129,16 +158,16 @@ class UGVActionRunner(Node):
 
             elif action["type"] == "move_to_location":
                 print('move to location')
-                time.sleep(5)  # mock navigation
-                success = True
-                '''lat, lon = action['location']['lat'], action['location']['lon']
+                #time.sleep(5)  # mock navigation
+                #success = True
+                lat, lon = action['location']['lat'], action['location']['lon']
                 utm_x, utm_y, _, _ = utm.from_latlon(lat, lon)
                 map_x, map_y = utm_x - self.utm_origin_easting, utm_y - self.utm_origin_northing
-                success = self.send_navigation_goal(map_x, map_y)'''
+                success = self.send_navigation_goal(map_x, map_y)
 
             elif action["type"] == "allow_land_on_UGV":
                 self.get_logger().info("Allowing UAV to land")
-                success = True
+                success = True #improve
 
             ugv_task_status[action_id]["status"] = "SUCCESS" if success else "FAILED"
             update_status(ugv_task_status)
@@ -154,7 +183,7 @@ class UGVActionRunner(Node):
 
 def main():
     rclpy.init()
-    map_origin = (41.86996889940987, -87.65044364173002)  # Replace with real origin
+    map_origin = (41.8699520602877, -87.65042710596418)  # Replace with real origin
     script_dir = os.path.dirname(os.path.abspath(__file__))
     actions_yaml = os.path.join(script_dir, '../config/ugv_actions.yaml')
 

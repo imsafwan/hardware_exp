@@ -7,9 +7,19 @@ import json
 import tempfile
 import socket
 import shutil
+import asyncio
+import yaml
+import logging
+import socket
+from mavsdk import System
+from uav_actions import takeoff, goto_gps_target_modi_2, land, vision_landing
+import time
+import os
+import json
 
-
-
+# ==== Utility ====
+async def anext(aiter):
+    return await aiter.__anext__()
 
 
 # === Logging Setup ===
@@ -55,6 +65,26 @@ ugv_status = {}
 async def run():
     uav_task_status = {}
 
+    # Connect to drone
+    drone = System()
+    await drone.connect(system_address="udp://:14540")
+    log.info("Connecting to drone...")
+
+    async for state in drone.core.connection_state():
+        if state.is_connected:
+            log.info("✅ Drone connected.")
+            break
+
+    # Get reference (home) GPS position
+    ref_pos = await anext(drone.telemetry.position())
+    ref_lat = ref_pos.latitude_deg
+    ref_lon = ref_pos.longitude_deg
+    ref_alt = ref_pos.absolute_altitude_m
+
+    pv = await anext(drone.telemetry.position_velocity_ned())
+    offset_n = pv.position.north_m
+    offset_e = pv.position.east_m
+
     # Load YAML mission
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -85,16 +115,16 @@ async def run():
             try:
                 if action_type == "takeoff_from_UGV":
                     print('takeoff action')
-                    time.sleep(5)
-                    success = True
-                    # success = await takeoff(drone, altitude=7.0)
+                    # time.sleep(5)
+                    # success = True
+                    success = await takeoff(drone, altitude=7.0)
 
                 elif action_type == "move_to_location":
                    
                     
-                    time.sleep(5)
-                    success = True
-                    ''' success = await goto_gps_target_modi_2(
+                    # time.sleep(5)
+                    # success = True
+                    success = await goto_gps_target_modi_2(
                         drone,
                         action['location']["lat"], action['location']["lon"], 7,
                         ref_lat, ref_lon, ref_alt,
@@ -102,7 +132,7 @@ async def run():
                         arrival_thresh=0.25,
                         offset_n=offset_n,
                         offset_e=offset_e
-                    )'''
+                    )
 
                 elif action_type == "land_on_UGV":
                     s_time = time.time()
@@ -116,9 +146,9 @@ async def run():
                             ugv_status.update(msg)
                             status = ugv_status["ugv_task_status"].get(action_id, {}).get("status")
                             if status == "SUCCESS":
-                                time.sleep(5)
-                                success = True
-                                #success = await land(drone)  # or vision_landing(drone)
+                                # time.sleep(5)
+                                # success = True
+                                success = await land(drone)  # or vision_landing(drone)
                                 break
                         except Exception:
                             continue
