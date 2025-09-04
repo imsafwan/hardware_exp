@@ -3,7 +3,7 @@
 set -e
 
 echo "🚙 Starting UAV task runner..."
-python3 uav_action_test_v3.py &
+python3 uav_action_test_v4.py &
 UAV_TASK_PID=$!
 
 echo "📡 Starting UAV broadcaster..."

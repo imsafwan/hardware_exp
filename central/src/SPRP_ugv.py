@@ -1,0 +1,412 @@
+from copy import deepcopy
+import networkx as nx
+import math
+from geopy.distance import geodesic
+
+
+def haversine_distance(coord1, coord2):
+    """
+    Calculate great-circle distance (in meters) between two GPS points.
+    coord1, coord2 = (lat, lon) in decimal degrees
+    """
+    R = 6371000  # Earth radius in meters
+
+    lat1, lon1 = math.radians(coord1[0]), math.radians(coord1[1])
+    lat2, lon2 = math.radians(coord2[0]), math.radians(coord2[1])
+
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+
+    return R * c
+
+def get_node_id(road_network, coord):
+ 
+    min_dist = float("inf")
+    nearest_node = None
+
+    for node in road_network.nodes:
+        node_coord = (road_network.nodes[node]["lat"], road_network.nodes[node]["lon"])
+        d = haversine_distance(coord, node_coord)
+        if d < min_dist:
+            min_dist = d
+            nearest_node = node
+
+    return nearest_node
+
+
+# Function to find nearest node
+def find_nearest_node(graph, loc):
+    nearest_node = None
+    nearest_node_id = None
+    min_dist = float("inf")
+    for node, data in graph.nodes(data=True):
+        node_loc = (data["lat"], data["lon"])
+        dist = geodesic(loc, node_loc).meters
+        if dist < min_dist:
+            min_dist = dist
+            nearest_node = node_loc
+            nearest_node_id = node
+    return nearest_node, nearest_node_id
+
+
+#---------------------------------------------------------------------------------#  
+uav_flying_time = 138 # sec = min*60
+uav_velocity = 0.67 # m/s
+land_time = 25.0 # seconds
+ugv_velocity = 0.5 # m/s
+#---------------------------------------------------------------------------------#
+
+
+
+
+
+def ugv_needs_replan(uav_state, ugv_state, uav_actions, ugv_actions, road_network):
+    
+    uav_actions = deepcopy(uav_actions)
+    ugv_actions = deepcopy(ugv_actions)
+
+    old_land_loc = uav_actions[-2]["location"]
+
+    uav_loc = uav_state["loc"]
+    uav_elapsed = uav_state["time_elapsed"]
+    uav_remaining_time = uav_flying_time - uav_elapsed - land_time
+
+    ugv_loc = ugv_state["loc"]
+    if ugv_state["next_road_point"] is None:
+        nearest_node, nearest_node_id = find_nearest_node(road_network, ugv_loc)
+        ugv_state["next_road_point"] = nearest_node
+    ugv_next_road_point = ugv_state["next_road_point"]
+
+    dist_cur_loc_2_nxt_road = haversine_distance(ugv_loc, ugv_next_road_point)
+
+    
+    #0. Check if old rendezvous still feasible ---
+    
+    node_lat = old_land_loc["lat"]
+    node_lon = old_land_loc["lon"]
+    node_coord = (node_lat, node_lon)
+    old_land_node_id = get_node_id(road_network, node_coord)
+
+    
+    dist_to_ugv =  nx.shortest_path_length(road_network, ugv_next_road_point, old_land_node_id, weight="weight")   # meters
+    total_dist_to_ugv = dist_to_ugv + dist_cur_loc_2_nxt_road
+    time_ugv = total_dist_to_ugv / ugv_velocity
+
+    if time_ugv <= uav_remaining_time:
+        # Old rendezvous still feasible
+        return uav_actions, "KEEP_OLD_RENDEZVOUS"
+    
+    
+    
+
+    
+    
+    #preliminary checks
+    if len(uav_actions) == 1:   # only landing reamins 
+        return uav_actions, "KEEP_OLD_RENDEZVOUS"
+    
+    if len(uav_actions) == 0: # all actions are terminated
+        return [], "PLAN_END"
+    
+    # 1. Compute candidate rendezvous points (reachable by both) ---
+    candidate_rendezvous_points = compute_candidate_points(uav_state, ugv_state, road_network)
+    
+    actions_trim = uav_actions[:-2].copy()  # remove last move + land pair (to try new land first)
+
+    if actions_trim != []:
+    
+        
+        # 2. Rollback search (trim move-to-location one by one before final land)
+        k = len(actions_trim)  # 
+        for i in range(k, -1, -1):
+            candidate_seq = uav_actions[:i]  # trim
+            
+            feasible, new_rp = find_new_rp(candidate_seq, uav_state, candidate_rendezvous_points)
+            if feasible:
+                move_to_new_rp = {"type": "move_to_location", "ins_id": "move_new", "location": new_rp}
+                new_land = {"type": "land_on_UGV", "ins_id": "land_new", "location": new_rp}
+                return candidate_seq + [move_to_new_rp] + [new_land], f"ROLLOUT_NEW_R (trimmed to {i})"
+            else:
+                print('cannot find new rp') 
+
+    else:
+
+        # 3. Try only new rendezvous (no trimming of old actions)
+        feasible, new_rp = find_new_rp([], uav_state, candidate_rendezvous_points)
+        if feasible:
+            move_to_new_rp = {"type": "move_to_location", "ins_id": "move_new", "location": new_rp}
+            new_land = {"type": "land_on_UGV", "ins_id": "land_new", "location": new_rp}
+            return [move_to_new_rp] + [new_land], "NEW_RP_ONLY"
+        else:
+            print('cannot find new rp')
+        
+    
+
+    return [], "GLOBAL_REPLAN"  # nothing worked
+
+
+
+def ugv_is_replanning(uav_state, ugv_state, uav_actions, ugv_remaining_actions, road_network):
+
+    uav_plan, status = ugv_needs_replan(uav_state, ugv_state, uav_actions, ugv_remaining_actions, road_network)
+
+    print("Replan status:", status)
+
+    if status == "PLAN_END":
+        ugv_plan = ugv_remaining_actions
+        uav_plan = []
+        print("UAV has completed all actions.")
+        
+    elif status == "GLOBAL_REPLAN": # uav will immediately land
+        uav_loc = uav_state["loc"]
+        uav_time = uav_state["time_elapsed"]
+        uav_plan = [  {"type": "land_on_UGV", "ins_id": "land_1", "location": {"lat": uav_loc[0],"lon": uav_loc[1]},'end_time': uav_time  + land_time}, ]
+        ugv_plan = [{
+        "type": "allow_land_on_UGV",
+        "location": {
+            "lat": uav_loc[0],
+            "lon": uav_loc[1]
+        },
+        "ins_id": "land_1",
+        "end_time": uav_time  + land_time
+    }]
+
+
+
+    elif status == 'KEEP_OLD_RENDEZVOUS':
+
+        ugv_plan = ugv_remaining_actions
+        print('UAV plan:',  uav_plan, '\n')
+        print('UGV plan:',  ugv_plan, '\n')
+        print("No change on UAV/UGV plans.")
+
+    else: # new rendezvous point
+
+        uav_cur_loc = uav_state["loc"]
+        elapsed = uav_state["time_elapsed"]
+
+        # add end time to each action
+        for act in uav_plan:
+            if act["type"] == "move_to_location":
+                tgt = (act["location"]["lat"], act["location"]["lon"])
+                dist = haversine_distance(uav_cur_loc, tgt)
+                action_time = dist / uav_velocity
+                elapsed += action_time
+                act['end_time'] = elapsed
+                uav_cur_loc = tgt
+
+            elif act["type"] == "land_on_UGV":
+                elapsed += land_time
+                act['end_time'] = elapsed
+
+
+        
+        ugv_plan = create_ugv_plan(ugv_state, uav_plan[-2]["location"], road_network)  # already comes with end_time
+
+
+        print("New plan:")
+        print('UAV plan:',  uav_plan, '\n')
+        print('UGV plan:',  ugv_plan, '\n')
+        
+
+    return uav_plan , ugv_plan
+
+
+# ------------------------   Helper functions (to be implemented properly) ------------------------ #
+
+
+def can_uav_reach(seq, uav_cur_state):
+    uav_cur_loc = uav_cur_state["loc"]
+    elapsed = uav_cur_state["time_elapsed"]
+    endurance = uav_flying_time
+
+    remaining_time = endurance - elapsed
+    future_actions_time = 0.0
+
+    for act in seq:
+        if act["type"] == "move_to_location":
+            tgt = (act["location"]["lat"], act["location"]["lon"])
+            dist = haversine_distance(uav_cur_loc, tgt)
+            action_time = dist / uav_velocity
+            #print('Time to ', tgt, ' from ', uav_cur_loc, ' is ', dist / uav_velocity)
+            future_actions_time += action_time
+            uav_cur_loc = tgt
+        elif act["type"] == "land_on_UGV":
+            future_actions_time += land_time
+    #print('Total future actions time: ', future_actions_time, ' Remaining time: ', remaining_time)
+    return future_actions_time <= remaining_time
+
+
+
+
+def find_new_rp(seq, uav_cur_state, candidate_rendezvous_points):
+    uav_cur_loc = uav_cur_state["loc"]
+    elapsed = uav_cur_state["time_elapsed"]
+    endurance = uav_flying_time
+    remaining_time = endurance - elapsed
+    future_actions_time = 0.0
+
+    # simulate all actions except last "move+land" pair
+    
+    for act in seq:
+        if act["type"] == "move_to_location":
+            tgt = (act["location"]["lat"], act["location"]["lon"])
+            dist = haversine_distance(uav_cur_loc, tgt)
+            #print('Time to ', tgt, ' from ', uav_cur_loc, ' is ', dist / uav_velocity)
+            future_actions_time += dist / uav_velocity
+            uav_cur_loc = tgt
+        elif act["type"] == "land_on_UGV":
+            raise KeyError("Should not have landing as action")
+            #future_actions_time += land_time
+
+    # check each candidate rendezvous
+    min_time = float('inf')
+    best_rp = None
+    for r in candidate_rendezvous_points:
+        tgt = (r["lat"], r["lon"])
+        dist = haversine_distance(uav_cur_loc, tgt)
+        action_time = dist / uav_velocity
+
+        print('Time to reach rp ', tgt, ' from ', uav_cur_loc, ' is ', dist / uav_velocity)
+
+        total_time = future_actions_time + action_time + land_time
+        print('Total time to land on rp ', tgt, ' is ', total_time, ' Remaining time: ', remaining_time)
+
+        if total_time <= remaining_time and total_time < min_time:
+            min_time = total_time
+            best_rp = r
+
+    return best_rp is not None, best_rp
+        
+
+
+
+    
+def compute_candidate_points(uav_state, ugv_state, road_network):
+    
+    uav_loc = uav_state["loc"]
+    uav_elapsed = uav_state["time_elapsed"]
+    uav_remaining_time = uav_flying_time - uav_elapsed - land_time
+
+    ugv_loc = ugv_state["loc"]
+    ugv_next_road_point = ugv_state["next_road_point"]
+    if ugv_next_road_point is None:
+        nearest_node, nearest_node_id = find_nearest_node(road_network, ugv_loc)
+        ugv_state["next_road_point"] = nearest_node
+        
+
+
+    ugv_next_road_point_id = get_node_id(road_network, ugv_next_road_point)
+
+    dist_cur_loc_2_nxt_road = haversine_distance(ugv_loc, ugv_next_road_point)
+
+    candidate_points = []
+    
+    for node in road_network.nodes:
+        node_lat = road_network.nodes[node]["lat"]
+        node_lon = road_network.nodes[node]["lon"]
+        node_coord = (node_lat, node_lon)
+
+
+
+        # UGV time to reach node
+        dist_to_ugv =  nx.shortest_path_length(road_network, ugv_next_road_point_id, node, weight="weight")   # meters
+        total_dist_to_ugv = dist_to_ugv + dist_cur_loc_2_nxt_road
+        time_ugv = total_dist_to_ugv / ugv_velocity
+
+        # UAV time to reach node
+        dist_uav = haversine_distance(uav_loc, node_coord)
+        time_uav = dist_uav / uav_velocity
+
+        # Rendezvous feasible if both can arrive within UAV endurance
+        if max(time_ugv, time_uav) <= uav_remaining_time:
+            candidate_points.append({"lat": node_lat, "lon": node_lon})
+
+    return candidate_points
+
+
+def create_ugv_plan(ugv_state, new_rp, road_network):
+    """
+    Create UGV move actions to reach new rendezvous point.
+    """
+    start_node_id = get_node_id(road_network,    ugv_state["next_road_point"])
+    target_node_id = get_node_id(road_network,    ( new_rp["lat"], new_rp["lon"]))
+
+    # shortest path on road network
+    path = nx.shortest_path(road_network, start_node_id, target_node_id, weight="weight")
+
+    ugv_plan = []
+    ugv_plan.append({
+            "type": "move_to_location",
+            "ins_id": f"ugv_move_{0}",
+            "location": {"lat": ugv_state["next_road_point"][0], "lon": ugv_state["next_road_point"][1]}
+        })
+
+    for idx, node in enumerate(path[1:]):  # skip start node
+        lat = road_network.nodes[node]["lat"]
+        lon = road_network.nodes[node]["lon"]
+        ugv_plan.append({
+            "type": "move_to_location",
+            "ins_id": f"ugv_move_{idx}",
+            "location": {"lat": lat, "lon": lon}
+        })
+
+    # Add land action for UAV
+    ugv_plan.append({
+        "type": "allow_land_on_UGV",
+        "ins_id": "land_new",
+        "location": {"lat": new_rp["lat"], "lon": new_rp["lon"]}
+    })
+
+    return ugv_plan
+
+
+
+
+# # ------------------------   Example usage ------------------------ #
+
+
+
+# # --- UAV state ---
+# uav_state = {
+#     "loc": (41.870050, -87.650200),   # current GPS position
+#     "time_elapsed": 60.0              # 1 minute into mission
+# }
+
+# # --- UGV state ---
+# ugv_state = {
+#     "loc": (41.870000, -87.650400),          # current GPS pos (off-road a bit)
+#     "next_road_point": (41.870000, -87.650300)  # nearest road node
+# }
+
+# # --- Road network (simple 3-node graph) ---
+# road_network = nx.Graph()
+
+# road_network.add_node("A", lat=41.870000, lon=-87.650300)
+# road_network.add_node("B", lat=41.870100, lon=-87.650250)
+# road_network.add_node("C", lat=41.870050, lon=-87.650150)
+
+# # Add edges with weights (meters, just dummy distances)
+# road_network.add_edge("A", "B", weight=15.0)
+# road_network.add_edge("B", "C", weight=20.0)
+# road_network.add_edge("A", "C", weight=25.0)
+
+# # --- UAV planned actions (as per your YAML) ---
+# uav_actions = [
+#     {"type": "move_to_location", "ins_id": "move_1",
+#      "location": {"lat": 41.870111, "lon": -87.650272}},
+#     {"type": "move_to_location", "ins_id": "move_2",
+#      "location": {"lat": 41.870007, "lon": -87.650315}},
+#     {"type": "move_to_location", "ins_id": "move_3",
+#      "location": {"lat": 41.870017, "lon": -87.650253}},
+#     {"type": "move_to_location", "ins_id": "move_4",
+#      "location": {"lat": 41.870100, "lon": -87.650250}},
+#     {"type": "land_on_UGV", "ins_id": "land_2"},
+# ]
+
+
+
+

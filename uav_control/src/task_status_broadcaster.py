@@ -46,7 +46,7 @@ def broadcast_status():
                         msg = json.dumps(status).encode()
                         sock.sendto(msg, (BROADCAST_IP, UGV_LISTEN_PORT))
                         sock.sendto(msg, (BROADCAST_IP, C_LISTEN_PORT))
-                        log.info(f"📡 Broadcast: {msg}")
+                        #log.info(f"📡 Broadcast: {msg}")
                         last_sent = status
 
                 except Exception as e:

@@ -34,9 +34,9 @@ async def takeoff(drone, altitude=10.0):
         while True:
             pos = await anext(drone.telemetry.position())
             rel_alt = pos.relative_altitude_m
-            print(f" Current relative altitude: {rel_alt:.2f} m")
+            #print(f" Current relative altitude: {rel_alt:.2f} m")
             if rel_alt >= altitude - tolerance:
-                print(f" Reached target altitude: {rel_alt:.2f} m")
+                #print(f" Reached target altitude: {rel_alt:.2f} m")
                 return True
     except Exception as e:
         print(f" Takeoff error: {e}")
@@ -61,8 +61,8 @@ async def goto_gps_target_modi_2(
     # Convert GPS target to NED
     tgt_n, tgt_e, _ = pm.geodetic2ned(target_lat, target_lon, ref_alt,
                                       ref_lat, ref_lon, ref_alt)
-    tgt_n -= offset_n
-    tgt_e -= offset_e
+    tgt_n += offset_n
+    tgt_e += offset_e
 
     print(f"Navigating to NED (N:{tgt_n:.2f} E:{tgt_e:.2f}) @ rel Alt:{target_alt:.2f}")
 
@@ -84,16 +84,19 @@ async def goto_gps_target_modi_2(
             cur_e = pv.position.east_m
             rel_z = gps.relative_altitude_m
 
+            #print('GPS: lat:{:.6f} lon:{:.6f}'.format(gps.latitude_deg, gps.longitude_deg))
+
             dn = tgt_n - cur_n
             de = tgt_e - cur_e
             dist_xy = math.hypot(dn, de)
+            #print(f" Distance to target XY: {dist_xy:.2f} m")
 
             alt_err = target_alt - rel_z
             vd = -(alt_err * alt_Kp) + hover_bias
             vd = max(min(vd, vz_clip), -vz_clip)
 
             if dist_xy < arrival_thresh:
-                print(" Arrived at target XY & altitude")
+                #print(" Arrived at target XY & altitude")
                 break
 
             if dist_xy > 1e-3:
@@ -102,7 +105,7 @@ async def goto_gps_target_modi_2(
             else:
                 vn = ve = 0.0
 
-            print(f"z:{rel_z:.2f}m   XY:{dist_xy:.2f}m  AltErr:{alt_err:.2f}m  vn:{vn:.2f} ve:{ve:.2f} vd:{vd:.2f}")
+            #print(f"z:{rel_z:.2f}m   XY:{dist_xy:.2f}m  AltErr:{alt_err:.2f}m  vn:{vn:.2f} ve:{ve:.2f} vd:{vd:.2f}")
             await drone.offboard.set_velocity_ned(VelocityNedYaw(vn, ve, vd, 0.0))
             #await asyncio.sleep(dt)
     except Exception as e:
