@@ -2,6 +2,10 @@ from copy import deepcopy
 import networkx as nx
 import math
 from geopy.distance import geodesic
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def haversine_distance(coord1, coord2):
@@ -130,7 +134,7 @@ def ugv_needs_replan(uav_state, ugv_state, uav_actions, ugv_actions, road_networ
                 new_land = {"type": "land_on_UGV", "ins_id": "land_new", "location": new_rp}
                 return candidate_seq + [move_to_new_rp] + [new_land], f"ROLLOUT_NEW_R (trimmed to {i})"
             else:
-                print('cannot find new rp') 
+                logger.info('cannot find new rp') 
 
     else:
 
@@ -141,7 +145,7 @@ def ugv_needs_replan(uav_state, ugv_state, uav_actions, ugv_actions, road_networ
             new_land = {"type": "land_on_UGV", "ins_id": "land_new", "location": new_rp}
             return [move_to_new_rp] + [new_land], "NEW_RP_ONLY"
         else:
-            print('cannot find new rp')
+            logger.info('cannot find new rp')
         
     
 
@@ -153,12 +157,12 @@ def ugv_is_replanning(uav_state, ugv_state, uav_actions, ugv_remaining_actions, 
 
     uav_plan, status = ugv_needs_replan(uav_state, ugv_state, uav_actions, ugv_remaining_actions, road_network)
 
-    print("Replan status:", status)
+    logger.info("Replan status:", status)
 
     if status == "PLAN_END":
         ugv_plan = ugv_remaining_actions
         uav_plan = []
-        print("UAV has completed all actions.")
+        logger.info("UAV has completed all actions.")
         
     elif status == "GLOBAL_REPLAN": # uav will immediately land
         uav_loc = uav_state["loc"]
@@ -179,9 +183,9 @@ def ugv_is_replanning(uav_state, ugv_state, uav_actions, ugv_remaining_actions, 
     elif status == 'KEEP_OLD_RENDEZVOUS':
 
         ugv_plan = ugv_remaining_actions
-        print('UAV plan:',  uav_plan, '\n')
-        print('UGV plan:',  ugv_plan, '\n')
-        print("No change on UAV/UGV plans.")
+        logger.info('UAV plan:',  uav_plan, '\n')
+        logger.info('UGV plan:',  ugv_plan, '\n')
+        logger.info("No change on UAV/UGV plans.")
 
     else: # new rendezvous point
 
@@ -207,9 +211,9 @@ def ugv_is_replanning(uav_state, ugv_state, uav_actions, ugv_remaining_actions, 
         ugv_plan = create_ugv_plan(ugv_state, uav_plan[-2]["location"], road_network)  # already comes with end_time
 
 
-        print("New plan:")
-        print('UAV plan:',  uav_plan, '\n')
-        print('UGV plan:',  ugv_plan, '\n')
+        logger.info("New plan:")
+        logger.info('UAV plan:',  uav_plan, '\n')
+        logger.info('UGV plan:',  ugv_plan, '\n')
         
 
     return uav_plan , ugv_plan
@@ -231,12 +235,12 @@ def can_uav_reach(seq, uav_cur_state):
             tgt = (act["location"]["lat"], act["location"]["lon"])
             dist = haversine_distance(uav_cur_loc, tgt)
             action_time = dist / uav_velocity
-            #print('Time to ', tgt, ' from ', uav_cur_loc, ' is ', dist / uav_velocity)
+            #logger.info('Time to ', tgt, ' from ', uav_cur_loc, ' is ', dist / uav_velocity)
             future_actions_time += action_time
             uav_cur_loc = tgt
         elif act["type"] == "land_on_UGV":
             future_actions_time += land_time
-    #print('Total future actions time: ', future_actions_time, ' Remaining time: ', remaining_time)
+    #logger.info('Total future actions time: ', future_actions_time, ' Remaining time: ', remaining_time)
     return future_actions_time <= remaining_time
 
 
@@ -255,7 +259,7 @@ def find_new_rp(seq, uav_cur_state, candidate_rendezvous_points):
         if act["type"] == "move_to_location":
             tgt = (act["location"]["lat"], act["location"]["lon"])
             dist = haversine_distance(uav_cur_loc, tgt)
-            #print('Time to ', tgt, ' from ', uav_cur_loc, ' is ', dist / uav_velocity)
+            #logger.info('Time to ', tgt, ' from ', uav_cur_loc, ' is ', dist / uav_velocity)
             future_actions_time += dist / uav_velocity
             uav_cur_loc = tgt
         elif act["type"] == "land_on_UGV":
@@ -270,10 +274,10 @@ def find_new_rp(seq, uav_cur_state, candidate_rendezvous_points):
         dist = haversine_distance(uav_cur_loc, tgt)
         action_time = dist / uav_velocity
 
-        print('Time to reach rp ', tgt, ' from ', uav_cur_loc, ' is ', dist / uav_velocity)
+        logger.info('Time to reach rp ', tgt, ' from ', uav_cur_loc, ' is ', dist / uav_velocity)
 
         total_time = future_actions_time + action_time + land_time
-        print('Total time to land on rp ', tgt, ' is ', total_time, ' Remaining time: ', remaining_time)
+        logger.info('Total time to land on rp ', tgt, ' is ', total_time, ' Remaining time: ', remaining_time)
 
         if total_time <= remaining_time and total_time < min_time:
             min_time = total_time

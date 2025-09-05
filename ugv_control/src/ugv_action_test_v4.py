@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+''' It executes UGV actions from an action plan, communicates with UAV via UDP, and reports status to a central manager.  '''
+
+
+
+
+
 from rclpy.clock import Clock
 import rclpy
 from rclpy.node import Node
@@ -15,8 +21,44 @@ import shutil
 import threading
 import tempfile
 from collections import deque
-from rclpy.clock import Clock
-from datetime import datetime
+import logging
+import os
+import datetime
+
+
+# ensure log directory exists
+LOG_DIR = "logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+LOG_FILE = os.path.join(LOG_DIR, f"ugv_actions_{timestamp}.log")
+
+logging.basicConfig(
+    filename=LOG_FILE,   # now stored inside logs/
+    level=logging.INFO,  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+
+
+
+logger = logging.getLogger("main")
+
+def logger_print(msg, level="info"):
+    print(msg)
+    if level == "info":
+        logger.info(msg)
+    elif level == "warn":
+        logger.warn(msg)
+    elif level == "error":
+        logger.error(msg)
+    elif level == "debug":
+        logger.debug(msg)
+
+
+logger_print("System started")
+
+
+
+
 
 
 def get_sim_time_from_file(filename="/home/safwan/hardware_exp/central/src/clock_log.txt"):
@@ -101,7 +143,7 @@ class UGVActionRunner(Node):
         self.start_background_tasks()
         
         
-        self.get_logger().info("UGV Action Runner initialized")
+        logger_print("UGV Action Runner initialized")
 
     def gps_callback(self, msg):
         """Callback for GPS updates from ROS2 topic"""
@@ -112,7 +154,7 @@ class UGVActionRunner(Node):
                     self.current_position = {"lat": msg.latitude, "lon": msg.longitude}
                     
         except Exception as e:
-            self.get_logger().error(f"GPS callback error: {e}")
+            logger_print(f"GPS callback error: {e}")
 
     def get_current_location(self):
         """Get current live location thread-safely"""
@@ -147,10 +189,10 @@ class UGVActionRunner(Node):
                     self.ugv_task_status[aid] = {"type": action["type"], "status": "PENDING"}
             
             self.update_status_file()
-            self.get_logger().info(f"Loaded {len(plan)} actions")
+            logger_print(f"Loaded {len(plan)} actions")
             
         except Exception as e:
-            self.get_logger().error(f"Failed to load YAML: {e}")
+            logger_print(f"Failed to load YAML: {e}")
 
     def update_status_file(self):
         """Safely update status file"""
@@ -165,7 +207,7 @@ class UGVActionRunner(Node):
             os.replace(temp_name, self.status_file)
             
         except Exception as e:
-            self.get_logger().error(f"Failed to write status: {e}")
+            logger_print(f"Failed to write status: {e}")
 
     def send_udp_message(self, msg, port):
         """Send UDP message (non-blocking)"""
@@ -173,7 +215,7 @@ class UGVActionRunner(Node):
             data = json.dumps(msg).encode()
             self.sock_tx.sendto(data, (self.manager_ip, port))
         except Exception as e:
-            self.get_logger().error(f"UDP send error: {e}")
+            logger_print(f"UDP send error: {e}")
 
     def status_broadcaster(self):
         """Background thread for status broadcasting"""
@@ -185,7 +227,7 @@ class UGVActionRunner(Node):
                     
                     remaining = list(self.action_queue)
                     task_status = self.ugv_task_status.copy()
-                    #print('remaining:', remaining)
+                    #logger_print('remaining:', remaining)
 
                     
                     if len(remaining) >= 1:
@@ -211,7 +253,7 @@ class UGVActionRunner(Node):
                 #time.sleep(0.1)  # Send every second
                 
             except Exception as e:
-                self.get_logger().error(f"Status broadcast error: {e}")
+                logger_print(f"Status broadcast error: {e}")
                 time.sleep(1.0)
 
     def plan_checker(self):
@@ -227,7 +269,7 @@ class UGVActionRunner(Node):
                     
                     with self.lock:
                         if plan_id > self.current_plan_id:
-                            self.get_logger().info(f"📥 New plan {plan_id} received")
+                            logger_print(f"📥 New plan {plan_id} received")
                             self.current_plan_id = plan_id
                             
                             # Update plan
@@ -246,7 +288,7 @@ class UGVActionRunner(Node):
                 # No data available - normal
                 time.sleep(0.1)
             except Exception as e:
-                self.get_logger().error(f"Plan check error: {e}")
+                logger_print(f"Plan check error: {e}")
                 time.sleep(0.1)
 
     def ros_spinner(self):
@@ -255,7 +297,7 @@ class UGVActionRunner(Node):
             try:
                 rclpy.spin_once(self, timeout_sec=0.1)
             except Exception as e:
-                self.get_logger().error(f"ROS spin error: {e}")
+                logger_print(f"ROS spin error: {e}")
                 time.sleep(0.1)
 
     def start_background_tasks(self):
@@ -276,7 +318,7 @@ class UGVActionRunner(Node):
             
             # Wait for server
             if not self.nav_client.wait_for_server(timeout_sec=5.0):
-                self.get_logger().error("Navigation server not available")
+                logger_print("Navigation server not available")
                 return False
             
             # Send goal
@@ -285,7 +327,7 @@ class UGVActionRunner(Node):
             
             goal_handle = send_goal_future.result()
             if not goal_handle or not goal_handle.accepted:
-                self.get_logger().error("Navigation goal rejected")
+                logger_print("Navigation goal rejected")
                 return False
             
             # Wait for result (with reasonable timeout)
@@ -296,14 +338,14 @@ class UGVActionRunner(Node):
             success = result and result.status == 4
             
             if success:
-                self.get_logger().info("Navigation completed successfully")
+                logger_print("Navigation completed successfully")
             else:
-                self.get_logger().error(f"Navigation failed with status: {result.status if result else 'timeout'}")
+                logger_print(f"Navigation failed with status: {result.status if result else 'timeout'}")
             
             return success
             
         except Exception as e:
-            self.get_logger().error(f"Navigation error: {e}")
+            logger_print(f"Navigation error: {e}")
             return False
 
     def send_replan_request(self, reason, action_id=None):
@@ -316,48 +358,55 @@ class UGVActionRunner(Node):
             "time": get_sim_time_from_file()
         }
         self.send_udp_message(msg, self.manager_port_rp)
-        self.get_logger().warn(f"Sent replan request: {reason}")
+        logger_print(f"Sent replan request: {reason}")
 
     def execute_action(self, action):
         """Execute a single action"""
         action_id = action.get("ins_id", f"ugv_{int(get_sim_time_from_file())}")
         action_type = action["type"]
         
-        self.get_logger().info(f"Executing {action_id}: {action_type}")
+        logger_print(f"Executing {action_id}: {action_type}")
         success = False
         
         try:
             if action_type == "move_to_location":
                 lat, lon = action['location']['lat'], action['location']['lon']
-                print(' Moving to lat, lon:', lat, lon)
+                logger_print(f' Moving to lat, lon: {lat} {lon}')
                 utm_x, utm_y, _, _ = utm.from_latlon(lat, lon)
                 map_x = utm_x - self.utm_origin_easting
                 map_y = utm_y - self.utm_origin_northing
-                print(' Moving to map x, y:', map_x, map_y)
+                logger_print(f' Moving to map {map_x},{map_y}')
                 success = self.send_navigation_goal(map_x, map_y)
                 
             elif action_type == "allow_take_off_from_UGV":
 
                 to_start_time = get_sim_time_from_file()
                 while True:
-                        
+                        print('aaaaa')
                         if get_sim_time_from_file() - to_start_time > 600: # timeout
-                            self.get_logger().error(f"⏳ Timeout for {action_id}")
+                            logger_print(f"⏳ Timeout for {action_id}")
                             break
                         try:
                             data, _ = sock_uav.recvfrom(1024)
                             msg = json.loads(data.decode())
+                            logger_print(msg)
                             uav_status.update(msg)
+                            logger_print(uav_status)
                             status = uav_status["uav_task_status"].get(action_id, {}).get("status")
+                            logger_print(f'status: {status}')
                             if status == "SUCCESS":
-                                self.get_logger().info(f"Takeoff confirmed: {action_id}")
+                                logger_print(f"Takeoff confirmed: {action_id}")
                                 success = True
                                 break
                         except socket.timeout:
+                            logger_print('Waiting for UAV takeoff confirmation...')
                             continue
                         except Exception as e:
-                            self.get_logger().warn(f"Error parsing UAV status: {e}")
+                            
+                            logger_print(f"Error parsing UAV status: {e}")
                             continue
+
+                print('none')
 
 
                 # # Placeholder for UAV handshake
@@ -370,10 +419,10 @@ class UGVActionRunner(Node):
                 success = True
                 
             else:
-                self.get_logger().error(f"Unknown action: {action_type}")
+                logger_print(f"Unknown action: {action_type}")
                 
         except Exception as e:
-            self.get_logger().error(f"Action {action_id} failed: {e}")
+            logger_print(f"Action {action_id} failed: {e}")
         
         # Update status
         with self.lock:
@@ -385,7 +434,7 @@ class UGVActionRunner(Node):
         
         # Check timing
         elapsed = get_sim_time_from_file() - self.ugv_start_time
-        print('\n Time elapsed:', elapsed, '\n')
+        logger_print('\n Time elapsed:', elapsed, '\n')
         #if "end_time" in action and elapsed > action["end_time"]:
             #self.send_replan_request(f"Exceeded end_time {action['end_time']}", action_id)
         return success
@@ -405,17 +454,17 @@ class UGVActionRunner(Node):
                 st_time = get_sim_time_from_file()
                 success = self.execute_action(action)
                 exe_time = get_sim_time_from_file() - st_time
-                print(' Time takes to execute action {}: {:.1f}s'.format(action, exe_time))
+                logger_print(' Time takes to execute action {}: {:.1f}s'.format(action, exe_time))
                 
                 if not success:
                     action_id = action.get("ins_id", "unknown")
-                    self.get_logger().error(f"Action failed: {action_id}")
+                    logger_print(f"Action failed: {action_id}")
                     self.send_replan_request(f"Action failed: {action_id}")
                     # Don't clear queue - wait for replan
                     time.sleep(5.0)
                 
             except Exception as e:
-                self.get_logger().error(f"Main loop error: {e}")
+                logger_print(f"Main loop error: {e}")
                 time.sleep(1.0)
 
     def cleanup(self):
@@ -423,9 +472,9 @@ class UGVActionRunner(Node):
         try:
             self.sock_tx.close()
             self.sock_rx.close()
-            self.get_logger().info("UGV runner cleaned up")
+            logger_print("UGV runner cleaned up")
         except Exception as e:
-            self.get_logger().error(f"Cleanup error: {e}")
+            logger_print(f"Cleanup error: {e}")
 
 def main():
     rclpy.init()
@@ -440,7 +489,7 @@ def main():
     try:
         ugv_runner.run_actions()
     except KeyboardInterrupt:
-        print("UGV runner stopped by user")
+        logger_print("UGV runner stopped by user")
     finally:
         ugv_runner.cleanup()
         ugv_runner.destroy_node()

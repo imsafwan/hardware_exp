@@ -1,9 +1,40 @@
+''' It executes UAV actions from an action plan, communicates with a central manager via UDP, and reports status.  '''
+
+
 from rclpy.clock import Clock
 import socket, json, time, os, tempfile, shutil
 from collections import deque
 import asyncio
 from mavsdk import System
 from uav_actions import takeoff, goto_gps_target_modi_2, land
+import logging
+import datetime
+
+# ensure log directory exists
+LOG_DIR = "logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+LOG_FILE = os.path.join(LOG_DIR, f"uav_actions_{timestamp}.log")
+
+logging.basicConfig(
+    filename=LOG_FILE,   # now stored inside logs/
+    level=logging.INFO,  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+
+logger = logging.getLogger("main")
+
+def logger_print(msg, level="info"):
+    print(msg)
+    if level == "info":
+        logger.info(msg)
+    elif level == "warn":
+        logger.warn(msg)
+    elif level == "error":
+        logger.error(msg)
+    elif level == "debug":
+        logger.debug(msg)
 
 
 
@@ -27,11 +58,8 @@ def get_sim_time_from_file(filename="/home/safwan/hardware_exp/central/src/clock
 
 
 
-
-
-
 # ---------------- Setup ----------------
-UAV_PORT = 5007          # UAV listens here for plan updates from Manager
+UAV_PORT = 5007               # UAV listens here for plan updates from Manager
 MANAGER_IP = "192.168.0.161"  # central laptop / mission manager
 MANAGER_PORT_RP = 5040      # UAV sends status/replan requests to manager for replanning
 MANAGER_PORT_UAS = 5041     # UAV sends status/replan requests to manager for uav status
@@ -54,6 +82,19 @@ def update_status_file(uav_task_status):
         json.dump({"uav_task_status": uav_task_status}, f)
         temp_name = f.name
     os.replace(temp_name, STATUS_FILE)
+
+AOI_STATUS_FILE = os.path.join(TMP_DIR, "aoi_status.json")
+aoi_status_dict = {}
+
+def update_AoI_status_file(AoI_id, status="COMPLETED"):
+    aoi_status_dict[AoI_id] = status
+    with tempfile.NamedTemporaryFile("w", delete=False, dir=TMP_DIR) as f:
+        json.dump({"aoi_status": aoi_status_dict}, f)
+        temp_name = f.name
+    os.replace(temp_name, AOI_STATUS_FILE)
+
+
+
 
 
 async def status_broadcaster(drone, action_queue, sortie_start_time, period=0.1):
@@ -84,7 +125,7 @@ async def status_broadcaster(drone, action_queue, sortie_start_time, period=0.1)
             sock_tx.sendto(json.dumps(msg).encode(), (MANAGER_IP, MANAGER_PORT_UAS))
 
         except Exception as e:
-            print(f"Status broadcaster error: {e}")
+            logger_print(f"Status broadcaster error: {e}")
 
         await asyncio.sleep(period)  # wait before sending next update
 
@@ -97,7 +138,7 @@ def send_replan_request(reason):
         "time": get_sim_time_from_file()
     }
     sock_tx.sendto(json.dumps(msg).encode(), (MANAGER_IP, MANAGER_PORT_RP))
-    print(f"<---------------------------  Sent REPLAN_REQUEST ------------------------------>: {reason}")
+    logger_print(f"<---------------------------  Sent REPLAN_REQUEST ------------------------------>: {reason}")
 
 
 def check_for_new_plan(current_plan_id, action_queue, uav_task_status):
@@ -111,7 +152,7 @@ def check_for_new_plan(current_plan_id, action_queue, uav_task_status):
             if msg.get("msg_type") == "UAV_PLAN":
                 plan_id = msg["plan_id"]
                 if plan_id > current_plan_id:
-                    print(f" New plan {plan_id} received")
+                    logger_print(f" New plan {plan_id} received")
                     current_plan_id = plan_id
 
                     # Replace the queue with the new plan
@@ -153,10 +194,10 @@ async def execute_action(drone, action, ref_lat, ref_lon, ref_alt, offset_n, off
             return await land(drone)
 
         else:
-            print(f"Unknown action: {action_type}")
+            logger_print(f"Unknown action: {action_type}")
             return False
     except Exception as e:
-        print(f"Action {action_type} failed: {e}")
+        logger_print(f"Action {action_type} failed: {e}")
         return False
 
 
@@ -168,7 +209,7 @@ async def run():
     await drone.connect(system_address="udp://:14540")
     async for state in drone.core.connection_state():
         if state.is_connected:
-            print("UAV connected to PX4")
+            logger_print("UAV connected to PX4")
             break
 
     ref_pos = await drone.telemetry.position().__anext__()
@@ -193,29 +234,35 @@ async def run():
         if action_queue:
             action = action_queue.popleft()
             action_id = action.get("ins_id", f"uav_{int(get_sim_time_from_file())}")
-            print(f"Executing {action_id}: {action['type']}")
+            logger_print(f"Executing {action_id}: {action['type']}")
 
             start_time = get_sim_time_from_file()
             success = await execute_action(drone, action, ref_lat, ref_lon, ref_alt, offset_n, offset_e)
             exe_time = get_sim_time_from_file() - start_time
-            print(' Time takes to execute action {}: {:.1f}s'.format(action, exe_time))
+            logger_print(' Time takes to execute action {}: {:.1f}s'.format(action, exe_time))
 
             # Update status + report to manager
             uav_task_status[action_id] = {"type": action["type"], "status": "SUCCESS" if success else "FAILED"}
             update_status_file(uav_task_status)
+
+
+            # upate PoI status for move_to_location actions
+            if action["type"] == "move_to_location" and success:
+                
+                update_AoI_status_file(action['AoI_id'])
             
 
             # Local trigger: exceeded expected end_time
             if "end_time" in action:
                 uav_time_elapsed = get_sim_time_from_file() - uav_takeoff_time
-                print(' uav_time_elapsed: {:.1f}s, action end_time: {:.1f}s'.format(uav_time_elapsed, action["end_time"]))
+                logger_print(' uav_time_elapsed: {:.1f}s, action end_time: {:.1f}s'.format(uav_time_elapsed, action["end_time"]))
                 if uav_time_elapsed > action["end_time"]:
                     send_replan_request("Exceeded expected action time")
                     await asyncio.sleep(1.0)
 
 
             if not success:
-                print(f"Aborting mission at {action_id}")
+                logger_print(f"Aborting mission at {action_id}")
                 action_queue.clear()
 
         else:
@@ -228,4 +275,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(run())
     except KeyboardInterrupt:
-        print("UAV executor stopped by user")
+        logger_print("UAV executor stopped by user")

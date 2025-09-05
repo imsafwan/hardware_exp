@@ -7,6 +7,28 @@ import networkx as nx
 import math
 from SPRP_uav import uav_is_replanning
 from SPRP_ugv import ugv_is_replanning
+import datetime
+import os
+import logging
+
+
+# === Logging Setup ===
+
+# ensure log directory exists
+LOG_DIR = "logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+LOG_FILE = os.path.join(LOG_DIR, f"replanner_{timestamp}.log")
+
+logging.basicConfig(
+    filename=LOG_FILE,   # now stored inside logs/
+    level=logging.INFO,  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+
+logger = logging.getLogger("main")
+
 
 def haversine_distance(coord1, coord2):
     """Calculate distance between two GPS coordinates in meters."""
