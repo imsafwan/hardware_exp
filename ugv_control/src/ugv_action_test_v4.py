@@ -382,18 +382,14 @@ class UGVActionRunner(Node):
 
                 to_start_time = get_sim_time_from_file()
                 while True:
-                        print('aaaaa')
                         if get_sim_time_from_file() - to_start_time > 600: # timeout
                             logger_print(f"⏳ Timeout for {action_id}")
                             break
                         try:
                             data, _ = sock_uav.recvfrom(1024)
                             msg = json.loads(data.decode())
-                            logger_print(msg)
                             uav_status.update(msg)
-                            logger_print(uav_status)
                             status = uav_status["uav_task_status"].get(action_id, {}).get("status")
-                            logger_print(f'status: {status}')
                             if status == "SUCCESS":
                                 logger_print(f"Takeoff confirmed: {action_id}")
                                 success = True
@@ -406,7 +402,7 @@ class UGVActionRunner(Node):
                             logger_print(f"Error parsing UAV status: {e}")
                             continue
 
-                print('none')
+               
 
 
                 # # Placeholder for UAV handshake
@@ -434,9 +430,10 @@ class UGVActionRunner(Node):
         
         # Check timing
         elapsed = get_sim_time_from_file() - self.ugv_start_time
-        logger_print('\n Time elapsed:', elapsed, '\n')
+        logger_print(f'\n Time elapsed: {elapsed}\n')
         #if "end_time" in action and elapsed > action["end_time"]:
             #self.send_replan_request(f"Exceeded end_time {action['end_time']}", action_id)
+            
         return success
 
     def run_actions(self):

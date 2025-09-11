@@ -1,0 +1,146 @@
+ID: state_uicfield_demo
+time: 0.0
+agents:
+- ID: UAV_01
+  type: UAV
+  subtype: standard
+  location:
+    x: -998.7172310413833
+    y: 1067.769795759949
+  battery_state:
+    max_battery_energy: 5.0
+    current_battery_energy: 0.0
+- ID: UGV_01
+  type: UGV
+  subtype: standard
+  location:
+    x: -998.7172310413833
+    y: 1067.769795759949
+scenario:
+  description: Loading Field for API development
+  type: regular_surveillance
+  subtype: standard
+  nodes:
+  - ID: AOI_1
+    type: air_only
+    location:
+      x: 41.870106
+      y: -87.650318
+    time_last_service: 0.0
+  - ID: AOI_2
+    type: air_only
+    location:
+      x: 41.870114
+      y: -87.650185
+    time_last_service: 0.0
+  - ID: AOI_3
+    type: air_only
+    location:
+      x: 41.870065
+      y: -87.650084
+    time_last_service: 0.0
+  - ID: AOI_4
+    type: air_only
+    location:
+      x: 41.870036
+      y: -87.650202
+    time_last_service: 0.0
+  - ID: AOI_5
+    type: air_only
+    location:
+      x: 41.86994
+      y: -87.650375
+    time_last_service: 22.964
+  - ID: AOI_6
+    type: air_only
+    location:
+      x: 41.869906
+      y: -87.650288
+    time_last_service: 31.652
+  - ID: AOI_7
+    type: air_only
+    location:
+      x: 41.869915
+      y: -87.650153
+    time_last_service: 0.0
+  - ID: AOI_8
+    type: air_only
+    location:
+      x: 41.869969
+      y: -87.650268
+    time_last_service: 39.648
+  - ID: AOI_9
+    type: air_only
+    location:
+      x: 41.870017
+      y: -87.650097
+    time_last_service: 0.0
+  - ID: AOI_10
+    type: air_only
+    location:
+      x: 41.870078
+      y: -87.650197
+    time_last_service: 0.0
+  - ID: rnp1
+    type: road
+    location:
+      x: 41.87
+      y: -87.650411
+    time_last_service: 0.0
+  - ID: rnp2
+    type: road
+    location:
+      x: 41.869991
+      y: -87.650384
+    time_last_service: 0.0
+  - ID: rnp3
+    type: road
+    location:
+      x: 41.869984
+      y: -87.650355
+    time_last_service: 0.0
+  - ID: rnp4
+    type: road
+    location:
+      x: 41.869983
+      y: -87.650322
+    time_last_service: 0.0
+  - ID: rnp5
+    type: road
+    location:
+      x: 41.869983
+      y: -87.650286
+    time_last_service: 0.0
+  - ID: rnp6
+    type: road
+    location:
+      x: 41.869982
+      y: -87.650249
+    time_last_service: 0.0
+  - ID: rnp7
+    type: road
+    location:
+      x: 41.869977
+      y: -87.6502
+    time_last_service: 0.0
+  - ID: rnp8
+    type: road
+    location:
+      x: 41.869971
+      y: -87.650152
+    time_last_service: 0.0
+  connections:
+  - end1: rnp1
+    end2: rnp2
+  - end1: rnp2
+    end2: rnp3
+  - end1: rnp3
+    end2: rnp4
+  - end1: rnp4
+    end2: rnp5
+  - end1: rnp5
+    end2: rnp6
+  - end1: rnp6
+    end2: rnp7
+  - end1: rnp7
+    end2: rnp8

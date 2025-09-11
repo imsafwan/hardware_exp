@@ -3,6 +3,12 @@ import networkx as nx
 import math
 from geopy.distance import geodesic
 import logging
+from scenario_helper import ScenarioParameters
+
+scene = ScenarioParameters('Inputs/scene.yaml')
+
+
+
 
 
 logger = logging.getLogger(__name__)
@@ -62,10 +68,10 @@ def get_node_id(road_network, coord):
     return nearest_node
 
 #---------------------------------------------------------------------------------#  
-uav_flying_time = 138 # sec = min*60
-uav_velocity = 0.67 # m/s
-land_time = 25.0 # seconds
-ugv_velocity = 0.9 # m/s
+uav_flying_time = 110 # sec = min*60
+uav_velocity = 0.9 # m/s
+land_time = 30.0 # seconds
+ugv_velocity = 0.5 # m/s
 #---------------------------------------------------------------------------------#
 
 
@@ -74,10 +80,10 @@ def uav_needs_replan(uav_state, ugv_state, uav_actions, road_network):
     actions = deepcopy(uav_actions)
 
     #preliminary checks
-    if len(actions) == 1:   # only landing reamins 
+    if len(actions) == 1:   # only landing remains 
         return actions, "KEEP_OLD_RENDEZVOUS"
     
-    if len(actions) == 0: # all actions are terminated
+    if len(actions) == 0:   # all actions are terminated
         return [], "PLAN_END"
 
     
@@ -231,6 +237,7 @@ def uav_is_replanning(uav_state, ugv_state, uav_actions, ugv_remaining_actions, 
         for act in uav_plan:
             if act["type"] == "move_to_location":
                 tgt = (act["location"]["lat"], act["location"]["lon"])
+                act['aoi_id'] =    scene.corrd_to_id_map[tgt] #'AOI_unknown'  # to be updated later
                 dist = haversine_distance(uav_cur_loc, tgt)
                 action_time = dist / uav_velocity
                 elapsed += action_time
@@ -381,6 +388,22 @@ def compute_candidate_points(uav_state, ugv_state, road_network):
 
 
     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

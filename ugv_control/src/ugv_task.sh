@@ -3,7 +3,7 @@
 set -e
 
 echo "🚙 Starting ugv task runner..."
-python3 ugv_action_test_v3.py &
+python3 ugv_action_test_v4.py &
 ugv_TASK_PID=$!
 
 echo "📡 Starting ugv broadcaster..."

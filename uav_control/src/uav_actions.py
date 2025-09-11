@@ -6,7 +6,11 @@ import numpy as np
 from simple_pid import PID
 import pymap3d as pm
 from mavsdk.offboard import OffboardError, VelocityNedYaw, VelocityBodyYawspeed
+import os
+from datetime import datetime
 import logging
+
+
 logger = logging.getLogger(__name__)   # module-level logger
 
 
@@ -132,9 +136,37 @@ async def goto_gps_target_modi_2(
     except Exception as e:
         logger_print(f"Failed to stop Offboard: {e}")
 
+
+
+    try:
+        logger_print(" Taking a photo at target...")
+        capture_and_save_photo()
+        logger_print(" Photo captured and saved")
+    except Exception as e:
+        logger_print(f"Failed to take photo: {e}")
+
     return True
 
-
+def capture_and_save_photo(device="/dev/video0", folder="photo"):
+    # Ensure folder exists
+    os.makedirs(folder, exist_ok=True)
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    save_path = os.path.join(folder, f"photo_{timestamp}.jpg")
+    # Capture image
+    cap = cv2.VideoCapture(device)
+    if not cap.isOpened():
+        logger_print(f"Failed to open camera: {device}")
+        return False
+    ret, frame = cap.read()
+    cap.release()
+    if ret:
+        cv2.imwrite(save_path, frame)
+        logger_print(f"Photo saved to {save_path}")
+        return True
+    else:
+        logger_print("Failed to capture frame")
+        return False
 
 async def land(drone):
     logger_print(" Landing...")

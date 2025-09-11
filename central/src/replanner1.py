@@ -10,7 +10,9 @@ from SPRP_ugv import ugv_is_replanning
 import datetime
 import os
 import logging
+from scenario_helper import ScenarioParameters
 
+    
 
 # === Logging Setup ===
 
@@ -28,6 +30,23 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger("main")
+
+
+
+def logger_print(msg, level="info"):
+    print(msg)
+    if level == "info":
+        logger.info(msg)
+    elif level == "warn":
+        logger.warn(msg)
+    elif level == "error":
+        logger.error(msg)
+    elif level == "debug":
+        logger.debug(msg)
+
+
+
+
 
 
 def haversine_distance(coord1, coord2):
@@ -49,34 +68,51 @@ def haversine_distance(coord1, coord2):
 
 #----------------------------------------------#
 
-# --- Road network (simple 3-node graph) ---
+scene = ScenarioParameters('Inputs/scene.yaml')
+scene_road_network = scene.road_network_G 
+
+# --- Initialize new graph with IDs instead of coordinates ---
 road_network = nx.Graph()
 
-# Road network nodes (UAV MUST land at these points)
-road_network.add_node("A", lat=41.870046, lon=-87.650351)  # Start position
-road_network.add_node("B", lat=41.870007, lon=-87.650315)  # Road intersection 1
-road_network.add_node("C", lat=41.869950, lon=-87.650280)  # Road intersection 2
-road_network.add_node("D", lat=41.869890, lon=-87.650240)  # Road intersection 3
-road_network.add_node("E", lat=41.869960, lon=-87.650180)  # Road intersection 4
-road_network.add_node("F", lat=41.870020, lon=-87.650120)  # Road intersection 5
+# Add nodes with ID and coordinates
+for coord in scene_road_network.nodes:
+    node_id = scene.corrd_to_id_map[coord]
+    road_network.add_node(node_id, lat=coord[0], lon=coord[1]) 
 
-# Calculate distances and add edges
-edges = [
-    ("A", "B"),
-    ("B", "C"), 
-    ("C", "D"),
-    ("D", "E"),
-    ("E", "F"),
-    ("B", "E"),  # Shortcut road
-    ("A", "C"),  # Alternative route
-    ("C", "F")   # Another route option
-]
+# Add edges with weights
+for u, v, data in scene_road_network.edges(data=True):
+    road_network.add_edge(
+        scene.corrd_to_id_map[u],
+        scene.corrd_to_id_map[v],
+        weight=data['weight']
+    )
 
-for start, end in edges:
-    start_coord = (road_network.nodes[start]["lat"], road_network.nodes[start]["lon"])
-    end_coord = (road_network.nodes[end]["lat"], road_network.nodes[end]["lon"])
-    distance = haversine_distance(start_coord, end_coord)
-    road_network.add_edge(start, end, weight=distance)
+
+# # Road network nodes (UAV MUST land at these points)
+# road_network.add_node("A", lat=41.870046, lon=-87.650351)  # Start position
+# road_network.add_node("B", lat=41.870007, lon=-87.650315)  # Road intersection 1
+# road_network.add_node("C", lat=41.869950, lon=-87.650280)  # Road intersection 2
+# road_network.add_node("D", lat=41.869890, lon=-87.650240)  # Road intersection 3
+# road_network.add_node("E", lat=41.869960, lon=-87.650180)  # Road intersection 4
+# road_network.add_node("F", lat=41.870020, lon=-87.650120)  # Road intersection 5
+
+# # Calculate distances and add edges
+# edges = [
+#     ("A", "B"),
+#     ("B", "C"), 
+#     ("C", "D"),
+#     ("D", "E"),
+#     ("E", "F"),
+#     ("B", "E"),  # Shortcut road
+#     ("A", "C"),  # Alternative route
+#     ("C", "F")   # Another route option
+# ]
+
+# for start, end in edges:
+#     start_coord = (road_network.nodes[start]["lat"], road_network.nodes[start]["lon"])
+#     end_coord = (road_network.nodes[end]["lat"], road_network.nodes[end]["lon"])
+#     distance = haversine_distance(start_coord, end_coord)
+#     road_network.add_edge(start, end, weight=distance)
 
 
 
@@ -111,11 +147,11 @@ def setup_socket(port):
 def send_plans(agent_name):
     """Send new plans to both agents"""
 
-    print(" > Generating new plans... \n")
+    logger_print(" > Generating new plans... \n")
     global plan_id
     plan_id += 1
 
-    print('\n Global state : ', global_state, '\n')
+    logger_print(f'\n Global state : {global_state}\n')
 
     if agent_name == "UAV":
                     uav_state = global_state['UAV']['uav_state']
@@ -135,12 +171,12 @@ def send_plans(agent_name):
     # Send to UAV
     msg = {"msg_type": "UAV_PLAN", "plan_id": plan_id, "new_plan": uav_plan}
     sock_tx.sendto(json.dumps(msg).encode(), (MANAGER_IP, UAV_PLAN_PORT))
-    print(f"- Sent plan {plan_id} to UAV")
+    logger_print(f"- Sent plan {plan_id} to UAV")
     
     # Send to UGV  
     msg = {"msg_type": "UGV_PLAN", "plan_id": plan_id, "new_plan": ugv_plan}
     sock_tx.sendto(json.dumps(msg).encode(), (MANAGER_IP, UGV_PLAN_PORT))
-    print(f"- Sent plan {plan_id} to UGV")
+    logger_print(f"- Sent plan {plan_id} to UGV")
 
 # ---------------- Listeners ---------------- #
 def listen_replan(sock, agent_name):
@@ -150,8 +186,8 @@ def listen_replan(sock, agent_name):
             data, _ = sock.recvfrom(4096)
             msg = json.loads(data.decode())
             if msg.get("msg_type") == "REPLAN_REQUEST":
-                print('\n ---------------- replanning request ----------- \n')
-                print(f"- {agent_name} requested replanning: {msg.get('reason')}")
+                logger_print('\n ---------------- replanning request ----------- \n')
+                logger_print(f"- {agent_name} requested replanning: {msg.get('reason')}")
                 send_plans(agent_name)
                 
         
@@ -161,7 +197,7 @@ def listen_replan(sock, agent_name):
 def listen_status(sock, agent_name):
     """Listen for status updates and update global state"""
     while True:
-        #print('global_state:', global_state)
+        #logger_print('global_state:', global_state)
         try:
             data, _ = sock.recvfrom(4096)
             msg = json.loads(data.decode())
@@ -169,21 +205,21 @@ def listen_status(sock, agent_name):
                 # Simple global state update
                 global_state[agent_name] = msg
                 
-                # Print status
+                # logger_print status
                 if agent_name == "UAV" and "uav_state" in msg:
                     loc = msg["uav_state"].get("loc", [0, 0])
                     remaining = len(msg.get("uav_remaining_actions", []))
-                    #print(f"📥 UAV: ({loc[0]:.6f},{loc[1]:.6f}), {remaining} left")
+                    #logger_print(f"📥 UAV: ({loc[0]:.6f},{loc[1]:.6f}), {remaining} left")
                 elif agent_name == "UGV" and "ugv_state" in msg:
                     loc = msg["ugv_state"].get("loc", [0, 0]) 
                     remaining = len(msg.get("ugv_remaining_actions", []))
-                    #print(f"📥 UGV: ({loc[0]:.6f},{loc[1]:.6f}), {remaining} left")
+                    #logger_print(f"📥 UGV: ({loc[0]:.6f},{loc[1]:.6f}), {remaining} left")
         except:
             time.sleep(0.1)
 
 # ---------------- Main ---------------- #
 def main():
-    print("🚀 Mission Manager starting...")
+    logger_print("🚀 Mission Manager starting...")
     
     # Setup sockets
     uav_replan_sock = setup_socket(UAV_REPLAN_PORT)
@@ -202,13 +238,13 @@ def main():
     for t in threads:
         t.start()
     
-    print("✅ Manager running. Press Ctrl+C to stop.")
+    logger_print("✅ Manager running. Press Ctrl+C to stop.")
     
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\n🛑 Manager stopped")
+        logger_print("\n🛑 Manager stopped")
 
 if __name__ == "__main__":
     main()

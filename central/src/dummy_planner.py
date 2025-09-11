@@ -11,7 +11,7 @@ plan_uav = {
     'msg_type': 'UAV_PLAN',
     'plan_id': 1,
     'new_plan': [
-        {'type': 'takeoff_from_UGV', 'ins_id': 'take_off_1', 'end_time': 7},
+        {'type': 'takeoff_from_UGV', 'ins_id': 'take_off_1', 'end_time': 10},
         {'type': 'move_to_location', 'ins_id': 'survey_building', 'location': {'lat': 41.87008, 'lon': -87.6504}, 'end_time': 25.277191717918285, 'aoi_id': 'AOI_1'},
         {'type': 'move_to_location', 'ins_id': 'survey_industrial', 'location': {'lat': 41.86985, 'lon': -87.6503}, 'end_time': 65.39938113996548, 'aoi_id': 'AOI_2'},
         {'type': 'move_to_location', 'ins_id': 'survey_residential', 'location': {'lat': 41.87005, 'lon': -87.6501}, 'end_time': 106.78395327848907, 'aoi_id': 'AOI_3'},

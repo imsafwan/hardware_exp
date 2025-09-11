@@ -6,7 +6,7 @@ import socket, json, time, os, tempfile, shutil
 from collections import deque
 import asyncio
 from mavsdk import System
-from uav_actions import takeoff, goto_gps_target_modi_2, land
+from uav_actions import takeoff, goto_gps_target_modi_2, land, vision_landing
 import logging
 import datetime
 
@@ -35,6 +35,16 @@ def logger_print(msg, level="info"):
         logger.error(msg)
     elif level == "debug":
         logger.debug(msg)
+
+# ==== Listen for UGV ====
+UGV_PORT = 5006
+sock_ugv = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock_ugv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+sock_ugv.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+sock_ugv.bind(("", UGV_PORT))
+ugv_status = {}
+
+
 
 
 
@@ -191,7 +201,26 @@ async def execute_action(drone, action, ref_lat, ref_lon, ref_alt, offset_n, off
             )
 
         elif action_type == "land_on_UGV":
-            return await land(drone)
+
+            s_time = time.time()
+            success = False      
+            while True:
+                if time.time() - s_time > 240:   # timeout
+                    break
+                data, _ = sock_ugv.recvfrom(1024)
+                try:
+                    msg = json.loads(data.decode())
+                    ugv_status.update(msg)
+                    action_id = action['ins_id']
+                    status = ugv_status["ugv_task_status"].get(action_id, {}).get("status")
+                    if status == "SUCCESS":
+                        # time.sleep(5)
+                        # success = True
+                        success = await vision_landing(drone) #land(drone)  # or vision_landing(drone)
+                        break
+                except Exception:
+                    continue
+            return success
 
         else:
             logger_print(f"Unknown action: {action_type}")
@@ -231,6 +260,8 @@ async def run():
         # Always check for latest plan (even if queue is not empty)
         current_plan_id = check_for_new_plan(current_plan_id, action_queue, uav_task_status)
 
+        logger_print('action list : {}'.format(action_queue))
+
         if action_queue:
             action = action_queue.popleft()
             action_id = action.get("ins_id", f"uav_{int(get_sim_time_from_file())}")
@@ -249,16 +280,17 @@ async def run():
             # upate PoI status for move_to_location actions
             if action["type"] == "move_to_location" and success:
                 
-                update_AoI_status_file(action['AoI_id'])
+                update_AoI_status_file(action['aoi_id'])
             
 
             # Local trigger: exceeded expected end_time
-            if "end_time" in action:
-                uav_time_elapsed = get_sim_time_from_file() - uav_takeoff_time
-                logger_print(' uav_time_elapsed: {:.1f}s, action end_time: {:.1f}s'.format(uav_time_elapsed, action["end_time"]))
-                if uav_time_elapsed > action["end_time"]:
-                    send_replan_request("Exceeded expected action time")
-                    await asyncio.sleep(1.0)
+            if len(list(action_queue)) >=2 : # if len = 1, that means remaining actions = move+land pair and if len = 0 , then only land.
+                if "end_time" in action:
+                    uav_time_elapsed = get_sim_time_from_file() - uav_takeoff_time
+                    logger_print(' uav_time_elapsed: {:.1f}s, action end_time: {:.1f}s'.format(uav_time_elapsed, action["end_time"]))
+                    if uav_time_elapsed > action["end_time"]:
+                        send_replan_request("Exceeded expected action time")
+                        await asyncio.sleep(1.0)
 
 
             if not success:

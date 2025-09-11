@@ -75,7 +75,7 @@ def main():
             try:
                 sock.sendto(msg.encode(), (BROADCAST_IP, UAV_LISTEN_PORT))
                 sock.sendto(msg.encode(), (BROADCAST_IP, C_LISTEN_PORT))
-                logger_print(f"→ Sent: {msg}")
+                logger_print(f"→ UGV Sent: {msg}")
             except Exception as e:
                 logger_print(f"Broadcast error: {e}")
             time.sleep(0.5)   # 1 Hz
