@@ -5,8 +5,8 @@ agents:
   type: UAV
   subtype: standard
   location:
-    x: 41.87
-    y: -87.650411
+    x: 41.869977
+    y: -87.6502
   battery_state:
     max_battery_energy: 5.0
     current_battery_energy: 0.0
@@ -14,8 +14,8 @@ agents:
   type: UGV
   subtype: standard
   location:
-    x: 41.87
-    y: -87.650411
+    x: 41.869977
+    y: -87.6502
 scenario:
   description: Loading Field for API development
   type: regular_surveillance
@@ -26,67 +26,67 @@ scenario:
     location:
       x: 41.870106
       y: -87.650318
-    time_last_service: 21.88
+    time_last_service: 129.08
   - ID: AOI_2
     type: air_only
     location:
       x: 41.870114
       y: -87.650185
-    time_last_service: 0.0
+    time_last_service: 488.67
   - ID: AOI_3
     type: air_only
     location:
       x: 41.870065
       y: -87.650084
-    time_last_service: 0.0
+    time_last_service: 396.64
   - ID: AOI_4
     type: air_only
     location:
       x: 41.870036
       y: -87.650202
-    time_last_service: 0.0
+    time_last_service: 223.2
   - ID: AOI_5
     type: air_only
     location:
       x: 41.86994
       y: -87.650375
-    time_last_service: 22.964
+    time_last_service: 23.68
   - ID: AOI_6
     type: air_only
     location:
       x: 41.869906
       y: -87.650288
-    time_last_service: 31.652
+    time_last_service: 32.63
   - ID: AOI_7
     type: air_only
     location:
       x: 41.869915
       y: -87.650153
-    time_last_service: 0.0
+    time_last_service: 309.38
   - ID: AOI_8
     type: air_only
     location:
       x: 41.869969
       y: -87.650268
-    time_last_service: 39.648
+    time_last_service: 40.5
   - ID: AOI_9
     type: air_only
     location:
       x: 41.870017
       y: -87.650097
-    time_last_service: 0.0
+    time_last_service: 390.52
   - ID: AOI_10
     type: air_only
     location:
       x: 41.870078
       y: -87.650197
-    time_last_service: 0.0
+    time_last_service: 484.57
   - ID: rnp1
     type: road
     location:
       x: 41.87
       y: -87.650411
-    time_last_service: 36.96
+    time_last_service: 53.34
   - ID: rnp2
     type: road
     location:
@@ -122,7 +122,7 @@ scenario:
     location:
       x: 41.869977
       y: -87.6502
-    time_last_service: 0.0
+    time_last_service: 230.17
   - ID: rnp8
     type: road
     location:

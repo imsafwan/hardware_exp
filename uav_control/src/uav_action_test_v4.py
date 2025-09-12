@@ -48,23 +48,40 @@ ugv_status = {}
 
 
 
-def get_sim_time_from_file(filename="/home/safwan/hardware_exp/central/src/clock_log.txt"):
-    # keep a static variable to store last valid time
-    if not hasattr(get_sim_time_from_file, "last_time"):
-        get_sim_time_from_file.last_time = None
+# def get_sim_time_from_file(filename="/home/safwan/hardware_exp/central/src/clock_log.txt"):
+#     # keep a static variable to store last valid time
+#     if not hasattr(get_sim_time_from_file, "last_time"):
+#         get_sim_time_from_file.last_time = None
 
-    try:
-        with open(filename, "r") as f:
-            line = f.read().strip()
-            if line:
-                get_sim_time_from_file.last_time = float(line)
-                return get_sim_time_from_file.last_time
-    except Exception as e:
-        # could add logging here if you want
-        pass
+#     try:
+#         with open(filename, "r") as f:
+#             line = f.read().strip()
+#             if line:
+#                 get_sim_time_from_file.last_time = float(line)
+#                 return get_sim_time_from_file.last_time
+#     except Exception as e:
+#         # could add logging here if you want
+#         pass
 
-    # fallback to last valid time if reading failed
-    return get_sim_time_from_file.last_time
+#     # fallback to last valid time if reading failed
+#     return get_sim_time_from_file.last_time
+
+def get_sim_time_from_file(filename="/home/safwan/hardware_exp/central/src/clock_log.txt", retry_delay=0.05, timeout=5.0):
+    start = time.time()
+    while True:
+        try:
+            with open(filename, "r") as f:
+                line = f.read().strip()
+                if line:
+                    return float(line)
+        except Exception:
+            pass
+
+        if time.time() - start > timeout:
+            raise RuntimeError("Timeout: could not read sim time from file.")
+        time.sleep(retry_delay)
+
+
 
 
 

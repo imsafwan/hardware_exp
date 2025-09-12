@@ -36,23 +36,38 @@ BUFFER_SIZE = 4096
 
 AOI_FILE = "aoi_status.txt"
 
-def get_sim_time_from_file(filename="/home/safwan/hardware_exp/central/src/clock_log.txt"):
-    # keep a static variable to store last valid time
-    if not hasattr(get_sim_time_from_file, "last_time"):
-        get_sim_time_from_file.last_time = None
+# def get_sim_time_from_file(filename="/home/safwan/hardware_exp/central/src/clock_log.txt"):
+#     # keep a static variable to store last valid time
+#     if not hasattr(get_sim_time_from_file, "last_time"):
+#         get_sim_time_from_file.last_time = None
 
-    try:
-        with open(filename, "r") as f:
-            line = f.read().strip()
-            if line:
-                get_sim_time_from_file.last_time = float(line)
-                return get_sim_time_from_file.last_time
-    except Exception as e:
-        # could add logging here if you want
-        pass
+#     try:
+#         with open(filename, "r") as f:
+#             line = f.read().strip()
+#             if line:
+#                 get_sim_time_from_file.last_time = float(line)
+#                 return get_sim_time_from_file.last_time
+#     except Exception as e:
+#         # could add logging here if you want
+#         pass
 
-    # fallback to last valid time if reading failed
-    return get_sim_time_from_file.last_time
+#     # fallback to last valid time if reading failed
+#     return get_sim_time_from_file.last_time
+
+def get_sim_time_from_file(filename="/home/safwan/hardware_exp/central/src/clock_log.txt", retry_delay=0.05, timeout=5.0):
+    start = time.time()
+    while True:
+        try:
+            with open(filename, "r") as f:
+                line = f.read().strip()
+                if line:
+                    return float(line)
+        except Exception:
+            pass
+
+        if time.time() - start > timeout:
+            raise RuntimeError("Timeout: could not read sim time from file.")
+        time.sleep(retry_delay)
 
 # === Helpers ===
 def run_remote(host, user, passwd, cmd):
@@ -99,7 +114,7 @@ def load_aoi_status():
                 aoi_status[node_id] = "COMPLETED"
 
     # Add an "unknown" AOI status
-    aoi_status["AOI_unknown"] = "PENDING"
+    #aoi_status["AOI_unknown"] = "PENDING"
     return aoi_status
 
 def save_aoi_status(aoi_status):
@@ -138,46 +153,47 @@ def start_local_tasks():
         print(f"Error starting local tasks: {e}")
 
 def start_planners():
-    """Start the planner processes in separate terminals."""
+    """Start the planner processes in tmux sessions."""
     try:
-        # Option 1: Using gnome-terminal (for Ubuntu/GNOME)
-        subprocess.Popen([
-            "gnome-terminal", "--", "bash", "-c", 
-            "python3 initial_plan.py; exec bash"
+        # Kill any existing planner session first
+        subprocess.run(["tmux", "kill-session", "-t", "planners"], stderr=subprocess.DEVNULL)
+        
+        # Create new tmux session for planners
+        subprocess.run([
+            "tmux", "new-session", "-d", "-s", "planners",
+            "python3 initial_plan.py"
+        ], check=True)
+        
+        # Split the window and run the second planner
+        subprocess.run([
+            "tmux", "split-window", "-t", "planners",
+            "python3 replanner1.py"
+        ], check=True)
+        
+        # Optional: Set window layout (horizontal split)
+        subprocess.run([
+            "tmux", "select-layout", "-t", "planners", "even-horizontal"
         ])
         
-        subprocess.Popen([
-            "gnome-terminal", "--", "bash", "-c", 
-            "python3 replanner1.py; exec bash"
-        ])
+        print("Started planners in tmux session 'planners'")
         
-        # Option 2: Using tmux split (alternative approach)
-        # subprocess.run([
-        #     "tmux", "new-session", "-d", "-s", "planners",
-        #     "python3 dummy_planner.py"
-        # ])
-        # subprocess.run([
-        #     "tmux", "split-window", "-t", "planners",
-        #     "python3 replanner1.py"
-        # ])
-        
-        print("Started planners in separate terminals")
-        
-    except Exception as e:
-        print(f"Error starting planners: {e}")
-        # Fallback to background processes if terminal opening fails
+    except subprocess.CalledProcessError as e:
+        print(f"Error starting planners in tmux: {e}")
+        # Fallback to background processes
         try:
             subprocess.Popen(["python3", "initial_plan.py"])
             subprocess.Popen(["python3", "replanner1.py"])
             print("Fallback: Started planners as background processes")
         except Exception as fallback_error:
             print(f"Fallback also failed: {fallback_error}")
-        
-    
+            
+    except Exception as e:
+        print(f"Unexpected error starting planners: {e}")
 
 def cleanup():
-    """Kill tmux sessions."""
+    """Kill all tmux sessions."""
     try:
+        # Kill all tmux sessions
         subprocess.run(["tmux", "kill-session", "-t", UAV_SESSION], stderr=subprocess.DEVNULL)
         subprocess.run(["tmux", "kill-session", "-t", UGV_SESSION], stderr=subprocess.DEVNULL)
         subprocess.run(["tmux", "kill-session", "-t", "planners"], stderr=subprocess.DEVNULL)
@@ -259,7 +275,11 @@ def main():
     mission_start_time = get_sim_time_from_file()
 
     try:
+
         while True:
+            
+            print('<--------- Executing one sortie --------->')
+
             # 1. Start UAV-UGV tasks
             start_local_tasks()
             time.sleep(2)
@@ -272,8 +292,14 @@ def main():
             last_msgs = {"UAV": None, "UGV": None}
 
             # --- Inner loop for a sortie ---
+            one_sortie_complete = False
             while True:
+
+                
+
+
                 readable, _, _ = select.select([sock_uav, sock_ugv], [], [])
+                
                 for s in readable:
                     try:
                         data, addr = s.recvfrom(BUFFER_SIZE)
@@ -320,7 +346,6 @@ def main():
                             rs_t = get_sim_time_from_file()
                             while True:
                                 if (get_sim_time_from_file() - rs_t) >= 30:  # 30 sec recharge
-                                    print("\n\n---------------- recharge completed! -----------------\n\n")
                                     break
                                 time.sleep(0.5)
 
@@ -337,12 +362,21 @@ def main():
                         t1.join()
                         t2.join()
 
+                        print("\n\n---------------- replan & recharge completed! -----------------\n\n")
+                        one_sortie_complete = True
                         break  # break inner sortie loop
+                
+                if one_sortie_complete:
+                     break
+
 
             # After sortie, check if mission is complete
             if all(v == "COMPLETED" for v in aoi_status.values()):
                 print("Mission end")
                 break  # break outer while loop
+        
+            else:
+                print('mission continuing')
 
     except KeyboardInterrupt:
         print("\nCentral server interrupted by user. Cleaning up...")

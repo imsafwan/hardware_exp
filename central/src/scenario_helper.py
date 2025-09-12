@@ -73,6 +73,18 @@ class ScenarioParameters:
         self.mission_elapsed_time = data_dict['time']
         self.depot_index = 0
 
+        agents = data_dict['agents']
+        uav_loc = (round(agents[0]['location']['x'],6), round(agents[0]['location']['y'],6))
+        ugv_loc = (round(agents[1]['location']['x'],6), round(agents[1]['location']['y'],6))
+        assert uav_loc == ugv_loc
+
+        self.starting_loc = uav_loc
+
+
+
+
+
+
         # self.start_coordinates = [id_to_coord_map['DepotA']]
         # self.end_coordinates = [ id_to_coord_map['DepotB'], id_to_coord_map['DepotC'] ]
         # self.state_ID = data_dict['ID']

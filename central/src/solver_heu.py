@@ -299,6 +299,7 @@ class Major_Replan():
         for i in remv:
             Targets.remove(i)
         
+        
         A.remove(starting)
         
         
@@ -1138,11 +1139,11 @@ def run_scenario_with_metaheuristic(metaheuristic, folder_name, plotting, scale,
 
     uav_data_points = uav_data_points_gps
     ugv_data_points = ugv_data_points_gps
-    depot = [scene.depot_index]
+    
 
     Targets = list(dict.fromkeys(uav_data_points)) # + ugv_data_points))
     Locations = ugv_data_points
-    starting  = ugv_data_points[depot[0]] 
+    starting  = scene.starting_loc 
     
 
     replan = Major_Replan(uav_data_points, ugv_data_points, Targets, Locations, starting, metaheuristic)
