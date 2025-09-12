@@ -11,7 +11,11 @@ import datetime
 import os
 import logging
 from scenario_helper import ScenarioParameters
+import yaml
 
+class NoAliasDumper(yaml.SafeDumper):
+    def ignore_aliases(self, data):
+        return True
     
 
 # === Logging Setup ===
@@ -177,6 +181,20 @@ def send_plans(agent_name):
     msg = {"msg_type": "UGV_PLAN", "plan_id": plan_id, "new_plan": ugv_plan}
     sock_tx.sendto(json.dumps(msg).encode(), (MANAGER_IP, UGV_PLAN_PORT))
     logger_print(f"- Sent plan {plan_id} to UGV")
+
+
+    # Ensure folder exists
+    os.makedirs("output", exist_ok=True)
+
+    # Dump UAV actions
+    with open(os.path.join("output", "uav_actions.yaml"), "w") as f:
+        yaml.dump({'sortie_1':uav_plan}, f, Dumper=NoAliasDumper, sort_keys=False)
+
+    # Dump UGV actions
+    with open(os.path.join("output", "ugv_actions.yaml"), "w") as f:
+        yaml.dump({'sortie_1':ugv_plan}, f, Dumper=NoAliasDumper, sort_keys=False)
+
+    print("Saved uav_actions.yaml and ugv_actions.yaml in output/")
 
 # ---------------- Listeners ---------------- #
 def listen_replan(sock, agent_name):

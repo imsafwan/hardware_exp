@@ -64,7 +64,12 @@ class ScenarioParameters:
         self.id_to_coord_map = id_to_coord_map
         self.road_network_G = G
         self.ugv_data_points = ugv_data_points
-        self.uav_data_points = uav_data_points
+        uav_data_points_nv = []
+        for i in nodes_info:
+            if i['type'] == 'air_only' and i['time_last_service'] == 0.0 :
+                uav_data_points_nv.append(  ( round(i['location']['x'], 6), round(i['location']['y'], 6) ) )
+        
+        self.uav_data_points = uav_data_points_nv
         self.mission_elapsed_time = data_dict['time']
         self.depot_index = 0
 

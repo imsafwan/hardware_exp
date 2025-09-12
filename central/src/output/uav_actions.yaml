@@ -7,102 +7,6 @@ sortie 1:
   end_time: 20.0
 - type: move_to_location
   location:
-    lat: 41.86994
-    lon: -87.650375
-  ins_id: move_1
-  aoi_id: AOI_5
-  end_time: 28.1
-- type: move_to_location
-  location:
-    lat: 41.86994
-    lon: -87.650375
-  ins_id: move_2
-  aoi_id: AOI_5
-  end_time: 28.1
-- type: move_to_location
-  location:
-    lat: 41.869906
-    lon: -87.650288
-  ins_id: move_3
-  aoi_id: AOI_6
-  end_time: 37.1
-- type: move_to_location
-  location:
-    lat: 41.869906
-    lon: -87.650288
-  ins_id: move_4
-  aoi_id: AOI_6
-  end_time: 37.1
-- type: move_to_location
-  location:
-    lat: 41.869969
-    lon: -87.650268
-  ins_id: move_5
-  aoi_id: AOI_8
-  end_time: 45.1
-- type: move_to_location
-  location:
-    lat: 41.869969
-    lon: -87.650268
-  ins_id: move_6
-  aoi_id: AOI_8
-  end_time: 45.1
-- type: move_to_location
-  location:
-    lat: 41.87
-    lon: -87.650411
-  ins_id: move_7
-  aoi_id: rnp1
-  end_time: 58.8
-- type: land_on_UGV
-  location:
-    lat: 41.87
-    lon: -87.650411
-  ins_id: land_1
-  end_time: 88.8
-sortie 2:
-- type: takeoff_from_UGV
-  location:
-    lat: 41.87
-    lon: -87.650411
-  ins_id: take_off_1
-  end_time: 20.0
-- type: move_to_location
-  location:
-    lat: 41.870106
-    lon: -87.650318
-  ins_id: move_1
-  aoi_id: AOI_1
-  end_time: 35.6
-- type: move_to_location
-  location:
-    lat: 41.870106
-    lon: -87.650318
-  ins_id: move_2
-  aoi_id: AOI_1
-  end_time: 35.6
-- type: move_to_location
-  location:
-    lat: 41.87
-    lon: -87.650411
-  ins_id: move_3
-  aoi_id: rnp1
-  end_time: 51.2
-- type: land_on_UGV
-  location:
-    lat: 41.87
-    lon: -87.650411
-  ins_id: land_1
-  end_time: 81.2
-sortie 3:
-- type: takeoff_from_UGV
-  location:
-    lat: 41.87
-    lon: -87.650411
-  ins_id: take_off_1
-  end_time: 20.0
-- type: move_to_location
-  location:
     lat: 41.870036
     lon: -87.650202
   ins_id: move_1
@@ -121,7 +25,7 @@ sortie 3:
     lon: -87.6502
   ins_id: land_1
   end_time: 85.7
-sortie 4:
+sortie 2:
 - type: takeoff_from_UGV
   location:
     lat: 41.869977
@@ -155,7 +59,7 @@ sortie 4:
     lon: -87.6502
   ins_id: land_1
   end_time: 84.1
-sortie 5:
+sortie 3:
 - type: takeoff_from_UGV
   location:
     lat: 41.869977
@@ -182,7 +86,7 @@ sortie 5:
     lon: -87.6502
   ins_id: land_1
   end_time: 67.6
-sortie 6:
+sortie 4:
 - type: takeoff_from_UGV
   location:
     lat: 41.869977

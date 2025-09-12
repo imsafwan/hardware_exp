@@ -217,6 +217,11 @@ async def execute_action(drone, action, ref_lat, ref_lon, ref_alt, offset_n, off
                         # time.sleep(5)
                         # success = True
                         success = await vision_landing(drone) #land(drone)  # or vision_landing(drone)
+
+
+                        
+
+
                         break
                 except Exception:
                     continue

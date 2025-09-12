@@ -5,8 +5,8 @@ agents:
   type: UAV
   subtype: standard
   location:
-    x: -998.7172310413833
-    y: 1067.769795759949
+    x: 41.87
+    y: -87.650411
   battery_state:
     max_battery_energy: 5.0
     current_battery_energy: 0.0
@@ -14,8 +14,8 @@ agents:
   type: UGV
   subtype: standard
   location:
-    x: -998.7172310413833
-    y: 1067.769795759949
+    x: 41.87
+    y: -87.650411
 scenario:
   description: Loading Field for API development
   type: regular_surveillance
@@ -26,7 +26,7 @@ scenario:
     location:
       x: 41.870106
       y: -87.650318
-    time_last_service: 0.0
+    time_last_service: 21.88
   - ID: AOI_2
     type: air_only
     location:
@@ -86,7 +86,7 @@ scenario:
     location:
       x: 41.87
       y: -87.650411
-    time_last_service: 0.0
+    time_last_service: 36.96
   - ID: rnp2
     type: road
     location:

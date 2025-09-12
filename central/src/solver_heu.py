@@ -1134,6 +1134,7 @@ def run_scenario_with_metaheuristic(metaheuristic, folder_name, plotting, scale,
     uav_data_points_gps = scene.uav_data_points # in gps lat,lon
     ugv_data_points_gps = scene.ugv_data_points # in gps lat,lon
     #starting_point_gps  = scene.starting_point  # in gps lat,lon
+    
 
     uav_data_points = uav_data_points_gps
     ugv_data_points = ugv_data_points_gps

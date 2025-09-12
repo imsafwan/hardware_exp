@@ -1,5 +1,5 @@
 {
-  "AOI_1": "PENDING",
+  "AOI_1": "COMPLETED",
   "AOI_2": "PENDING",
   "AOI_3": "PENDING",
   "AOI_4": "PENDING",
@@ -9,5 +9,6 @@
   "AOI_8": "COMPLETED",
   "AOI_9": "PENDING",
   "AOI_10": "PENDING",
-  "AOI_unknown": "PENDING"
+  "AOI_unknown": "PENDING",
+  "rnp1": "COMPLETED"
 }
