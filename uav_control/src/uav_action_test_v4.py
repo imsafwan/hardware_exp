@@ -9,6 +9,7 @@ from mavsdk import System
 from uav_actions import takeoff, goto_gps_target_modi_2, land, vision_landing
 import logging
 import datetime
+from gps_logger import record_gps_uav
 
 # ensure log directory exists
 LOG_DIR = "logs"
@@ -262,6 +263,9 @@ async def run():
         if state.is_connected:
             logger_print("UAV connected to PX4")
             break
+
+    # record gps
+    asyncio.create_task(record_gps_uav(drone, time.time()))
 
     ref_pos = await drone.telemetry.position().__anext__()
     ref_lat, ref_lon, ref_alt = ref_pos.latitude_deg, ref_pos.longitude_deg, ref_pos.absolute_altitude_m

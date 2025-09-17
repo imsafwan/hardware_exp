@@ -351,7 +351,7 @@ def main():
 
                         def replan_thread():
                             if all(v == "COMPLETED" for v in aoi_status.values()):
-                                print("Mission end")
+                                print("All points are visited")
                             else:
                                 subprocess.run(["python3", "solver_heu.py"], check=True)
 
@@ -373,6 +373,7 @@ def main():
             # After sortie, check if mission is complete
             if all(v == "COMPLETED" for v in aoi_status.values()):
                 print("Mission end")
+                print('Mission took around {} sec'.format(get_sim_time_from_file() - mission_start_time))
                 break  # break outer while loop
         
             else:

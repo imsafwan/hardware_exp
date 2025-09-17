@@ -188,11 +188,11 @@ def send_plans(agent_name):
 
     # Dump UAV actions
     with open(os.path.join("output", "uav_actions.yaml"), "w") as f:
-        yaml.dump({'sortie_1':uav_plan}, f, Dumper=NoAliasDumper, sort_keys=False)
+        yaml.dump({'sortie 1':uav_plan}, f, Dumper=NoAliasDumper, sort_keys=False)
 
     # Dump UGV actions
     with open(os.path.join("output", "ugv_actions.yaml"), "w") as f:
-        yaml.dump({'sortie_1':ugv_plan}, f, Dumper=NoAliasDumper, sort_keys=False)
+        yaml.dump({'sortie 1':ugv_plan}, f, Dumper=NoAliasDumper, sort_keys=False)
 
     print("Saved uav_actions.yaml and ugv_actions.yaml in output/")
 

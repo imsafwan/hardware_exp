@@ -11,7 +11,10 @@ log/
 # Temp status/runtime files
 tmp/
 
+# Rosbag files
 rosbag/
+*.db3
+*.bag
 
 # Virtual environments
 venv/
@@ -21,3 +24,8 @@ venv/
 .DS_Store
 *.swp
 *.swo
+
+# Experiment outputs
+*.jpg
+*.csv
+

@@ -165,7 +165,7 @@ class Major_Replan():
         self.Mission_elapsed_time = 0
         self.Locations = Locations
         self.starting = starting
-        self.Fuel_limit = 90 #int(1.5*60)  # min*60 = secs
+        self.Fuel_limit = 110 #int(1.5*60)  # min*60 = secs
          
         self.UAV_Mission_time = 0
         self.UAV_node_visit = [starting]
