@@ -171,16 +171,18 @@ def send_replan_request(reason):
 
 def check_for_new_plan(current_plan_id, action_queue, uav_task_status):
     """Poll socket up to max_checks times for PLAN_UPDATE.""" 
-    max_checks=10
+    max_checks = 10
     checks = 0
+
     while checks < max_checks:
         try:
-            data, _ = sock_rx.recvfrom(4096)  # non-blocking
+            data, addr = sock_rx.recvfrom(4096)
             msg = json.loads(data.decode())
+            
             if msg.get("msg_type") == "UAV_PLAN":
                 plan_id = msg["plan_id"]
                 if plan_id > current_plan_id:
-                    logger_print(f" New plan {plan_id} received")
+                    logger_print(f"New plan {plan_id} received")
                     current_plan_id = plan_id
 
                     # Replace the queue with the new plan
@@ -194,9 +196,18 @@ def check_for_new_plan(current_plan_id, action_queue, uav_task_status):
                         uav_task_status[aid] = {"type": a["type"], "status": "PENDING"}
                     update_status_file(uav_task_status)
 
-            checks += 1
+                    # Send ACK back to sender
+                    ack = json.dumps({"msg_type": "ACK", "plan_id": plan_id}).encode()
+                    sender_addr_ip = addr[0]     # IP of whoever sent the plan
+                    ack_port = 6000              # fixed ACK listener port on manager
+                    sock_tx.sendto(ack, (sender_addr_ip, ack_port))  # use addr from recvfrom
+
         except BlockingIOError:
             break  # no more data available
+        except socket.timeout:
+            break  # nothing arrived in time
+
+        checks += 1
 
     return current_plan_id
 

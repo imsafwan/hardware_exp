@@ -274,12 +274,12 @@ class UGVActionRunner(Node):
         while rclpy.ok():
             try:
                 # Check for new plans
-                data, _ = self.sock_rx.recvfrom(4096)
+                data, sender_addr = self.sock_rx.recvfrom(4096)
                 msg = json.loads(data.decode())
                 
                 if msg.get("msg_type") == "UGV_PLAN":
                     plan_id = msg["plan_id"]
-                    
+
                     with self.lock:
                         if plan_id > self.current_plan_id:
                             logger_print(f"📥 New plan {plan_id} received")
@@ -296,13 +296,24 @@ class UGVActionRunner(Node):
                                 self.ugv_task_status[aid] = {"type": action["type"], "status": "PENDING"}
                     
                     self.update_status_file()
-                    
+
+                    # === Send ACK back ===
+                    ack = {
+                        "msg_type": "ACK",
+                        "plan_id": plan_id,
+                    }
+                    sender_addr_ip = sender_addr[0]  # IP of whoever sent the plan
+                    ack_port = 6000              # fixed ACK listener port on manager
+                    self.sock_tx.sendto(json.dumps(ack).encode(), (sender_addr_ip, ack_port))
+                    logger_print(f"✅ Sent ACK for plan {plan_id} to {(sender_addr_ip, ack_port)}")
+
             except BlockingIOError:
                 # No data available - normal
                 time.sleep(0.1)
             except Exception as e:
                 logger_print(f"Plan check error: {e}")
                 time.sleep(0.1)
+
 
     def ros_spinner(self):
         """Background thread for ROS2 spinning to process callbacks"""
@@ -393,34 +404,34 @@ class UGVActionRunner(Node):
                 
             elif action_type == "allow_take_off_from_UGV":
 
-                to_start_time = get_sim_time_from_file()
-                while True:
-                        if get_sim_time_from_file() - to_start_time > 600: # timeout
-                            logger_print(f"Timeout for {action_id}")
-                            break
-                        try:
-                            data, _ = sock_uav.recvfrom(1024)
-                            msg = json.loads(data.decode())
-                            uav_status.update(msg)
-                            status = uav_status["uav_task_status"].get(action_id, {}).get("status")
-                            if status == "SUCCESS":
-                                logger_print(f"Takeoff confirmed: {action_id}")
-                                success = True
-                                break
-                        except socket.timeout:
-                            logger_print('Waiting for UAV takeoff confirmation...')
-                            continue
-                        except Exception as e:
+                # to_start_time = get_sim_time_from_file()
+                # while True:
+                #         if get_sim_time_from_file() - to_start_time > 600: # timeout
+                #             logger_print(f"Timeout for {action_id}")
+                #             break
+                #         try:
+                #             data, _ = sock_uav.recvfrom(1024)
+                #             msg = json.loads(data.decode())
+                #             uav_status.update(msg)
+                #             status = uav_status["uav_task_status"].get(action_id, {}).get("status")
+                #             if status == "SUCCESS":
+                #                 logger_print(f"Takeoff confirmed: {action_id}")
+                #                 success = True
+                #                 break
+                #         except socket.timeout:
+                #             logger_print('Waiting for UAV takeoff confirmation...')
+                #             continue
+                #         except Exception as e:
                             
-                            logger_print(f"Error parsing UAV status: {e}")
-                            continue
+                #             logger_print(f"Error parsing UAV status: {e}")
+                #             continue
 
                
 
 
-                # # Placeholder for UAV handshake
-                # time.sleep(0.5)
-                # success = True
+                # Placeholder for UAV handshake
+                time.sleep(0.5)
+                success = True
                 
             elif action_type == "allow_land_on_UGV":
                 # Placeholder for UAV handshake  

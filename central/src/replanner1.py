@@ -92,31 +92,7 @@ for u, v, data in scene_road_network.edges(data=True):
     )
 
 
-# # Road network nodes (UAV MUST land at these points)
-# road_network.add_node("A", lat=41.870046, lon=-87.650351)  # Start position
-# road_network.add_node("B", lat=41.870007, lon=-87.650315)  # Road intersection 1
-# road_network.add_node("C", lat=41.869950, lon=-87.650280)  # Road intersection 2
-# road_network.add_node("D", lat=41.869890, lon=-87.650240)  # Road intersection 3
-# road_network.add_node("E", lat=41.869960, lon=-87.650180)  # Road intersection 4
-# road_network.add_node("F", lat=41.870020, lon=-87.650120)  # Road intersection 5
 
-# # Calculate distances and add edges
-# edges = [
-#     ("A", "B"),
-#     ("B", "C"), 
-#     ("C", "D"),
-#     ("D", "E"),
-#     ("E", "F"),
-#     ("B", "E"),  # Shortcut road
-#     ("A", "C"),  # Alternative route
-#     ("C", "F")   # Another route option
-# ]
-
-# for start, end in edges:
-#     start_coord = (road_network.nodes[start]["lat"], road_network.nodes[start]["lon"])
-#     end_coord = (road_network.nodes[end]["lat"], road_network.nodes[end]["lon"])
-#     distance = haversine_distance(start_coord, end_coord)
-#     road_network.add_edge(start, end, weight=distance)
 
 
 
@@ -146,6 +122,34 @@ def setup_socket(port):
     sock.setblocking(False)
     return sock
 
+def send_with_ack(msg, target_ip, target_port, agent_name, max_retries=100, timeout=1.0):
+    """Send msg and wait for ACK from agent"""
+    sock_ack = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock_ack.bind(("0.0.0.0", 6000))   
+    sock_ack.settimeout(timeout)
+
+    
+
+    for attempt in range(max_retries):
+        # Send message
+        sock_tx.sendto(msg, (target_ip, target_port))
+        logger_print(f"→ Sent {msg[:50]}... to {agent_name} (attempt {attempt+1})")
+
+        try:
+            data, _ = sock_ack.recvfrom(4096)
+            ack = json.loads(data.decode())
+            if ack.get("msg_type") == "ACK" and ack.get("plan_id") == json.loads(msg.decode())["plan_id"]:
+                logger_print(f"✅ ACK received from {agent_name}")
+                sock_ack.close()
+                return True
+        except socket.timeout:
+            logger_print(f"⚠️ No ACK from {agent_name}, retrying...")
+
+    logger_print(f"❌ Failed to deliver plan to {agent_name} after {max_retries} retries")
+    sock_ack.close()
+    return False
+
+
 
 
 def send_plans(agent_name):
@@ -173,13 +177,13 @@ def send_plans(agent_name):
         
     
     # Send to UAV
-    msg = {"msg_type": "UAV_PLAN", "plan_id": plan_id, "new_plan": uav_plan}
-    sock_tx.sendto(json.dumps(msg).encode(), (MANAGER_IP, UAV_PLAN_PORT))
+    msg_uav = json.dumps({"msg_type": "UAV_PLAN", "plan_id": plan_id, "new_plan": uav_plan}).encode()
+    send_with_ack(msg_uav, MANAGER_IP, UAV_PLAN_PORT, "UAV")
     logger_print(f"- Sent plan {plan_id} to UAV")
     
     # Send to UGV  
-    msg = {"msg_type": "UGV_PLAN", "plan_id": plan_id, "new_plan": ugv_plan}
-    sock_tx.sendto(json.dumps(msg).encode(), (MANAGER_IP, UGV_PLAN_PORT))
+    msg_ugv = json.dumps({"msg_type": "UGV_PLAN", "plan_id": plan_id, "new_plan": ugv_plan}).encode()
+    send_with_ack(msg_ugv, MANAGER_IP, UGV_PLAN_PORT, "UGV")
     logger_print(f"- Sent plan {plan_id} to UGV")
 
 

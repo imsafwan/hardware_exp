@@ -10,6 +10,7 @@ import time
 import yaml
 import os
 
+print('begin central server')
 
 # === Config ===
 UAV_HOST = "192.168.10.120"
@@ -126,7 +127,7 @@ def start_local_tasks():
     """Start local UAV/UGV tasks in tmux sessions."""
     try:
         # Start UAV task
-        subprocess.run([
+        '''subprocess.run([
             "tmux", "kill-session", "-t", UAV_SESSION
         ], stderr=subprocess.DEVNULL)
         
@@ -134,7 +135,7 @@ def start_local_tasks():
             "tmux", "new-session", "-d", "-s", UAV_SESSION,
             "bash", "-c", 
             "cd ~/hardware_exp/uav_control/src && ./uav_task.sh; exec bash"
-        ])
+        ])'''
         
         # Start UGV task  
         subprocess.run([
@@ -194,7 +195,7 @@ def cleanup():
     """Kill all tmux sessions."""
     try:
         # Kill all tmux sessions
-        subprocess.run(["tmux", "kill-session", "-t", UAV_SESSION], stderr=subprocess.DEVNULL)
+        #subprocess.run(["tmux", "kill-session", "-t", UAV_SESSION], stderr=subprocess.DEVNULL)
         subprocess.run(["tmux", "kill-session", "-t", UGV_SESSION], stderr=subprocess.DEVNULL)
         subprocess.run(["tmux", "kill-session", "-t", "planners"], stderr=subprocess.DEVNULL)
         
@@ -268,9 +269,9 @@ def main():
 
     sortie_number = 1
 
-    if sortie_number == 1:
+    #if sortie_number == 1:
         # 0. Solve the scene once before starting
-        subprocess.run(["python3", "solver_heu.py"], check=True)
+        #subprocess.run(["python3", "solver_heu.py"], check=True)
 
     mission_start_time = get_sim_time_from_file()
 
