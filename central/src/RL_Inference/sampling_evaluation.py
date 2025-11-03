@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader
 
 from utils import load_model, move_to
 from utils.data_utils import save_dataset
-from Custom_environment_v1 import UAV_UGV_Env
+from Custom_environment_v2 import UAV_UGV_Env
 from action_yaml_wrapper import get_yaml
 from data_generate import generate_dataset_from_scene
 
@@ -44,7 +44,6 @@ def get_best(sequences, cost, agents, ids=None, batch_size=None):
     """Select the lowest-cost trajectory for each instance."""
     if ids is None:
         idx = cost.argmin()
-        kkk
         return sequences[idx:idx+1, ...], cost[idx:idx+1, ...]
     splits = np.hstack([0, np.where(ids[:-1] != ids[1:])[0] + 1])
     mincosts = np.minimum.reduceat(cost, splits)

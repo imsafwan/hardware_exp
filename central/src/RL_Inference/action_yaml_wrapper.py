@@ -83,9 +83,9 @@ class UAV_UGV_Env:
         self.scene = ScenarioParameters(scenario_path)
 
         # Constants
-        self.uav_speed = 0.9
+        self.uav_speed = 0.89
         self.ugv_speed = 0.2
-        self.takeoff_time = 11
+        self.takeoff_time = 12
         self.landing_time = 20
 
         # Mission nodes
