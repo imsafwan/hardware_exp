@@ -9,6 +9,8 @@
   "AOI_8": "COMPLETED",
   "AOI_9": "COMPLETED",
   "AOI_10": "COMPLETED",
-  "rnp1": "COMPLETED",
-  "rnp8": "COMPLETED"
+  "rnp2": "COMPLETED",
+  "rnp3": "COMPLETED",
+  "rnp6": "COMPLETED",
+  "rnp5": "COMPLETED"
 }

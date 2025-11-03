@@ -135,6 +135,7 @@ class UGVActionRunner(Node):
         
         # Shared state with simple lock
         self.action_queue = deque()
+        self.current_action = {"value": None}
         self.ugv_task_status = {}
         self.current_plan_id = 0
         self.lock = threading.Lock()
@@ -239,6 +240,8 @@ class UGVActionRunner(Node):
                     current_loc = self.get_current_location()
                     
                     remaining = list(self.action_queue)
+                    current_action_loc = self.current_action.get("value", {}).get("location", None)
+                    curr_rp = (current_action_loc['lat'], current_action_loc['lon']) if current_action_loc is not None else None
                     task_status = self.ugv_task_status.copy()
                     #logger_print('remaining:', remaining)
 
@@ -250,6 +253,7 @@ class UGVActionRunner(Node):
                     ugv_state = {
                         "loc": [current_loc["lat"], current_loc["lon"]],
                         "next_road_point": next_rp,
+                        'curr_road_point': curr_rp,
                         "time_elapsed": get_sim_time_from_file() - self.ugv_start_time
                     }
 
@@ -263,7 +267,7 @@ class UGVActionRunner(Node):
                 }
                 
                 self.send_udp_message(msg, self.manager_port_ugs)
-                #time.sleep(0.1)  # Send every second
+                time.sleep(1.0)  # Send every second
                 
             except Exception as e:
                 logger_print(f"Status broadcast error: {e}")
@@ -404,45 +408,37 @@ class UGVActionRunner(Node):
                 
             elif action_type == "allow_take_off_from_UGV":
 
-                # to_start_time = get_sim_time_from_file()
-                # while True:
-                #         if get_sim_time_from_file() - to_start_time > 600: # timeout
-                #             logger_print(f"Timeout for {action_id}")
-                #             break
-                #         try:
-                #             data, _ = sock_uav.recvfrom(1024)
-                #             msg = json.loads(data.decode())
-                #             uav_status.update(msg)
-                #             status = uav_status["uav_task_status"].get(action_id, {}).get("status")
-                #             if status == "SUCCESS":
-                #                 logger_print(f"Takeoff confirmed: {action_id}")
-                #                 success = True
-                #                 break
-                #         except socket.timeout:
-                #             logger_print('Waiting for UAV takeoff confirmation...')
-                #             continue
-                #         except Exception as e:
+                to_start_time = get_sim_time_from_file()
+                while True:
+                        if get_sim_time_from_file() - to_start_time > 600: # timeout
+                            logger_print(f"Timeout for {action_id}")
+                            break
+                        try:
+                            data, _ = sock_uav.recvfrom(1024)
+                            msg = json.loads(data.decode())
+                            uav_status.update(msg)
+                            status = uav_status["uav_task_status"].get(action_id, {}).get("status")
+                            if status == "SUCCESS":
+                                logger_print(f"Takeoff confirmed: {action_id}")
+                                success = True
+                                break
+                        except socket.timeout:
+                            logger_print('Waiting for UAV takeoff confirmation...')
+                            continue
+                        except Exception as e:
                             
-                #             logger_print(f"Error parsing UAV status: {e}")
-                #             continue
-
-               
-
+                            logger_print(f"Error parsing UAV status: {e}")
+                            continue
 
                 # Placeholder for UAV handshake
-                time.sleep(0.5)
-                success = True
+                # time.sleep(0.5)
+                # success = True
                 
             elif action_type == "allow_land_on_UGV":
                 # Placeholder for UAV handshake  
                 time.sleep(0.5)
                 success = True
-
-
-
-
-                
-                
+   
             else:
                 logger_print(f"Unknown action: {action_type}")
                 
@@ -459,9 +455,10 @@ class UGVActionRunner(Node):
         
         # Check timing
         elapsed = get_sim_time_from_file() - self.ugv_start_time
-        logger_print(f'\n Time elapsed: {elapsed}\n')
-        #if "end_time" in action and elapsed > action["end_time"]:
-            #self.send_replan_request(f"Exceeded end_time {action['end_time']}", action_id)
+        #logger_print(f'\n Time elapsed: {elapsed}\n')
+        if "end_time" in action and elapsed > action["end_time"]:
+            self.send_replan_request(f"Exceeded end_time {action['end_time']}", action_id)
+            time.sleep(2.0)  # wait for replan
             
         return success
 
@@ -475,11 +472,13 @@ class UGVActionRunner(Node):
                         time.sleep(1.0)
                         continue
                     action = self.action_queue.popleft()
+                    self.current_action["value"] = action
                 
                 # Execute action
                 st_time = get_sim_time_from_file()
                 success = self.execute_action(action)
                 exe_time = get_sim_time_from_file() - st_time
+                logger_print(f"mission_time_elapsed: {get_sim_time_from_file()-self.ugv_start_time}")
                 logger_print(' Time takes to execute action {}: {:.1f}s'.format(action, exe_time))
                 
                 if not success:
@@ -506,7 +505,7 @@ def main():
     rclpy.init()
     
     # Configuration
-    map_origin = (41.870046, -87.650351)
+    map_origin = (41.87, -87.650411)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     actions_yaml = os.path.join(script_dir, '../config/ugv_actions.yaml')
     

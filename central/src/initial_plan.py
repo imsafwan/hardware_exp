@@ -46,7 +46,7 @@ def send_with_ack(msg, addr, plan_id):
             print("No ACK yet, retrying...")
 
 # Send UAV plan with ack
-#send_with_ack(plan_uav, (UAV_IP, UAV_PORT), plan_uav["plan_id"])
+send_with_ack(plan_uav, (UAV_IP, UAV_PORT), plan_uav["plan_id"])
 
 # Send UGV plan with ack
 send_with_ack(plan_ugv, (UAV_IP, UGV_PORT), plan_ugv["plan_id"])

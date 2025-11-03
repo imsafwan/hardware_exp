@@ -68,10 +68,12 @@ def get_node_id(road_network, coord):
     return nearest_node
 
 #---------------------------------------------------------------------------------#  
-uav_flying_time = 110 # sec = min*60
+uav_full_flying_time = 100
+uav_flying_time = uav_full_flying_time*0.9 # sec = min*60
+
 uav_velocity = 0.9 # m/s
-land_time = 30.0 # seconds
-ugv_velocity = 0.5 # m/s
+land_time = 20.0 # seconds
+ugv_velocity = 0.2 # m/s
 #---------------------------------------------------------------------------------#
 
 
@@ -86,7 +88,6 @@ def uav_needs_replan(uav_state, ugv_state, uav_actions, road_network):
     if len(actions) == 0:   # all actions are terminated
         return [], "PLAN_END"
 
-    
     # 0. Try full sortie
     if can_uav_reach(actions, uav_state):
         return actions, "KEEP_OLD_RENDEZVOUS"
@@ -97,39 +98,36 @@ def uav_needs_replan(uav_state, ugv_state, uav_actions, road_network):
     actions_trim = actions[:-2].copy()  # remove last move + land pair (to try new land first)
 
     if actions_trim != []:
-    
-        
-        # 2. Rollback search (trim move-to-location one by one before final land)
-        k = len(actions_trim)  # 
+        found = False
+        k = len(actions_trim)
         for i in range(k, -1, -1):
-            candidate_seq = actions[:i]  # trim
-            
+            candidate_seq = actions[:i]
             feasible, new_rp = find_new_rp(candidate_seq, uav_state, candidate_rendezvous_points)
             if feasible:
                 move_to_new_rp = {"type": "move_to_location", "ins_id": "move_new", "location": new_rp}
-                new_land = {"type": "land_on_UGV", "ins_id": "land_new", "location": new_rp}
-                return candidate_seq + [move_to_new_rp] + [new_land], f"ROLLOUT_NEW_R (trimmed to {i})"
-            else:
-                logger_print('cannot find new rp') 
-
+                new_land = {"type": "land_on_UGV", "ins_id": "land_1", "location": new_rp}
+                return candidate_seq + [move_to_new_rp, new_land], f"ROLLOUT_NEW_R (trimmed to {i})"
+        # If we reach here → loop failed
+        logger_print('no feasible rp found in rollback — trying relaxed endurance (0.95× full)')
     else:
+        logger_print('cannot find new rp — trying relaxed endurance (0.95× full)')
 
-        # 3. Try only new rendezvous (no trimming of old actions)
-        feasible, new_rp = find_new_rp([], uav_state, candidate_rendezvous_points)
-        if feasible:
-            move_to_new_rp = {"type": "move_to_location", "ins_id": "move_new", "location": new_rp}
-            new_land = {"type": "land_on_UGV", "ins_id": "land_new", "location": new_rp}
-            return [move_to_new_rp] + [new_land], "NEW_RP_ONLY"
-        else:
-            logger_print('cannot find new rp')
-        
-    
+    # Relaxed endurance fallback (common to both cases)
+    relaxed_uav_state = deepcopy(uav_state)
+    temp_flying_time = globals()["uav_flying_time"]
+    globals()["uav_flying_time"] = 0.95 * uav_full_flying_time
 
-    return [], "GLOBAL_REPLAN"  # nothing worked
+    candidate_rendezvous_points = compute_candidate_points(uav_state, ugv_state, road_network)
+    feasible_relaxed, new_rp_relaxed = find_new_rp([], relaxed_uav_state, candidate_rendezvous_points)
+    globals()["uav_flying_time"] = temp_flying_time
 
-
-
-
+    if feasible_relaxed:
+        move_to_new_rp = {"type": "move_to_location", "ins_id": "move_relaxed", "location": new_rp_relaxed}
+        new_land = {"type": "land_on_UGV", "ins_id": "land_1", "location": new_rp_relaxed}
+        return [move_to_new_rp, new_land], "RELAXED_NEW_RP_ONLY"
+    else:
+        logger_print('still no feasible rp after relaxation')
+        return [], "GLOBAL_REPLAN"
 
 
 def create_ugv_plan(ugv_state, new_rp, road_network):
@@ -138,32 +136,34 @@ def create_ugv_plan(ugv_state, new_rp, road_network):
     """
 
     ugv_loc = ugv_state["loc"]
-    if ugv_state["next_road_point"] is None:
+    if ugv_state["curr_road_point"] is None:
         nearest_node, nearest_node_id = find_nearest_node(road_network, ugv_loc)
-        ugv_state["next_road_point"] = nearest_node
+        ugv_state["curr_road_point"] = nearest_node
 
-    start_node_id = get_node_id(road_network,    ugv_state["next_road_point"])
+    start_node_id = get_node_id(road_network,    ugv_state["curr_road_point"])
     target_node_id = get_node_id(road_network,    ( new_rp["lat"], new_rp["lon"]))
 
     # shortest path on road network
     path = nx.shortest_path(road_network, start_node_id, target_node_id, weight="weight")
 
     ugv_plan = []
-    elapsed = ugv_state['time_elapsed']
-    prev_loc = ugv_state["next_road_point"]
+    dist = haversine_distance(ugv_loc, ugv_state["curr_road_point"])
+    action_time = dist / ugv_velocity
+    elapsed = ugv_state['time_elapsed'] + action_time
+    prev_loc = ugv_state["curr_road_point"]
 
-    # First move (from current/next_road_point)
-    tgt = (ugv_state["next_road_point"][0], ugv_state["next_road_point"][1])
-    dist = haversine_distance(prev_loc, tgt)
-    action_time = dist / ugv_velocity if dist > 0 else 0
-    elapsed += action_time
-    ugv_plan.append({
-        "type": "move_to_location",
-        "ins_id": f"ugv_move_{0}",
-        "location": {"lat": tgt[0], "lon": tgt[1]},
-        'end_time': elapsed
-    })
-    prev_loc = tgt
+    # # First move (from current/next_road_point)
+    # tgt = (ugv_state["curr_road_point"][0], ugv_state["curr_road_point"][1])
+    # dist = haversine_distance(prev_loc, tgt)
+    # action_time = dist / ugv_velocity if dist > 0 else 0
+    # elapsed += action_time
+    # ugv_plan.append({
+    #     "type": "move_to_location",
+    #     "ins_id": f"ugv_move_{0}",
+    #     "location": {"lat": tgt[0], "lon": tgt[1]},
+    #     'end_time': elapsed
+    # })
+    # prev_loc = tgt
 
     for idx, node in enumerate(path[1:]):  # skip start node
         lat = road_network.nodes[node]["lat"]
@@ -184,7 +184,7 @@ def create_ugv_plan(ugv_state, new_rp, road_network):
     elapsed += land_time
     ugv_plan.append({
         "type": "allow_land_on_UGV",
-        "ins_id": "land_new",
+        "ins_id": "land_1",
         "location": {"lat": new_rp["lat"], "lon": new_rp["lon"]},
         'end_time': elapsed
     })
@@ -223,7 +223,28 @@ def uav_is_replanning(uav_state, ugv_state, uav_actions, ugv_remaining_actions, 
 
     elif status == 'KEEP_OLD_RENDEZVOUS':
 
-        ugv_plan = ugv_remaining_actions
+        uav_cur_loc = uav_state["loc"]
+        elapsed = uav_state["time_elapsed"]
+
+        # add end time to each action
+        for act in uav_plan:
+            if act["type"] == "move_to_location":
+                tgt = (act["location"]["lat"], act["location"]["lon"])
+                act['aoi_id'] =    scene.corrd_to_id_map[tgt]   #'AOI_unknown'  # to be updated later
+                dist = haversine_distance(uav_cur_loc, tgt)
+                action_time = dist / uav_velocity
+                elapsed += action_time
+                act['end_time'] = elapsed
+                uav_cur_loc = tgt
+
+            elif act["type"] == "land_on_UGV":
+                elapsed += land_time
+                act['end_time'] = elapsed
+
+        ugv_plan = create_ugv_plan(ugv_state, uav_plan[-2]["location"], road_network)  # already comes with end_time
+
+      
+        #ugv_plan = ugv_remaining_actions
         logger_print(f"UAV plan: {uav_plan} \n")
         logger_print(f"UGV plan: {ugv_plan} \n")
         logger_print("No change on UAV/UGV plans.")
@@ -248,11 +269,10 @@ def uav_is_replanning(uav_state, ugv_state, uav_actions, ugv_remaining_actions, 
                 elapsed += land_time
                 act['end_time'] = elapsed
 
-
-        
         ugv_plan = create_ugv_plan(ugv_state, uav_plan[-2]["location"], road_network)  # already comes with end_time
-
-
+        
+        logger_print(f"uav state: {uav_state}")
+        logger_print(f"old plan: {uav_actions}") 
         logger_print("New plan:")
         logger_print(f"UAV plan: {uav_plan} \n")
         logger_print(f"UGV plan: {ugv_plan} \n")
@@ -310,7 +330,7 @@ def find_new_rp(seq, uav_cur_state, candidate_rendezvous_points):
             uav_cur_loc = tgt
         elif act["type"] == "land_on_UGV":
             raise KeyError("Should not have landing as action")
-            #future_actions_time += land_time
+            
 
 
     
@@ -345,10 +365,10 @@ def compute_candidate_points(uav_state, ugv_state, road_network):
     uav_remaining_time = uav_flying_time - uav_elapsed - land_time
 
     ugv_loc = ugv_state["loc"]
-    ugv_next_road_point = ugv_state["next_road_point"]
+    ugv_next_road_point = ugv_state["curr_road_point"]
     if ugv_next_road_point is None:
         nearest_node, nearest_node_id = find_nearest_node(road_network, ugv_loc)
-        ugv_state["next_road_point"] = nearest_node
+        ugv_next_road_point = nearest_node
         
 
 
@@ -362,7 +382,6 @@ def compute_candidate_points(uav_state, ugv_state, road_network):
         node_lat = road_network.nodes[node]["lat"]
         node_lon = road_network.nodes[node]["lon"]
         node_coord = (node_lat, node_lon)
-
 
 
         # UGV time to reach node

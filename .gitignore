@@ -1,31 +1,53 @@
-# Python cache
+# ==========================
+# Python cache / artifacts
+# ==========================
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.pkl
+*.pt
 
+# ==========================
 # Logs
+# ==========================
 log/
+logs/
 *.log
 
-# Temp status/runtime files
+# ==========================
+# Archives
+# ==========================
+*.zip
+
+# ==========================
+# Temporary / runtime files
+# ==========================
 tmp/
 
-# Rosbag files
+# ==========================
+# ROS-related data
+# ==========================
 rosbag/
 *.db3
 *.bag
 
+# ==========================
 # Virtual environments
+# ==========================
 venv/
 .env/
 
+# ==========================
 # OS / editor files
+# ==========================
 .DS_Store
 *.swp
 *.swo
 
-# Experiment outputs
+# ==========================
+# Experiment / output files
+# ==========================
 *.jpg
 *.csv
 

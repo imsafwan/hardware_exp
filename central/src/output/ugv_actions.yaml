@@ -1,109 +1,131 @@
 sortie 1:
 - type: allow_take_off_from_UGV
   location:
-    lat: 41.87
-    lon: -87.650411
+    lat: 41.870023
+    lon: -87.650036
   ins_id: take_off_1
-  end_time: 20.0
+  end_time: 11
 - type: move_to_location
   location:
-    lat: 41.87
-    lon: -87.650411
+    lat: 41.870036
+    lon: -87.650068
+  ins_id: move_0
+  aoi_id: rnp2
+  end_time: 26.09
+- type: move_to_location
+  location:
+    lat: 41.870044
+    lon: -87.650101
   ins_id: move_1
-  aoi_id: rnp1
-  end_time: 20.0
+  aoi_id: rnp3
+  end_time: 40.46
 - type: move_to_location
   location:
-    lat: 41.87
-    lon: -87.650411
+    lat: 41.870053
+    lon: -87.650133
   ins_id: move_2
-  aoi_id: rnp1
-  end_time: 20.0
+  aoi_id: rnp4
+  end_time: 54.62
 - type: allow_land_on_UGV
   location:
-    lat: 41.87
-    lon: -87.650411
+    lat: 41.870053
+    lon: -87.650133
   ins_id: land_1
-  end_time: 108.2
+  aoi_id: rnp4
+  end_time: 74.62
 sortie 2:
 - type: allow_take_off_from_UGV
   location:
-    lat: 41.87
-    lon: -87.650411
+    lat: 41.870053
+    lon: -87.650133
   ins_id: take_off_1
-  end_time: 20.0
-- type: move_to_location
-  location:
-    lat: 41.87
-    lon: -87.650411
-  ins_id: move_1
-  aoi_id: rnp1
-  end_time: 20.0
-- type: move_to_location
-  location:
-    lat: 41.869991
-    lon: -87.650384
-  ins_id: move_2
-  aoi_id: rnp2
-  end_time: 24.9
-- type: move_to_location
-  location:
-    lat: 41.869984
-    lon: -87.650355
-  ins_id: move_3
-  aoi_id: rnp3
-  end_time: 29.9
-- type: move_to_location
-  location:
-    lat: 41.869983
-    lon: -87.650322
-  ins_id: move_4
   aoi_id: rnp4
-  end_time: 35.4
+  end_time: 11
 - type: move_to_location
   location:
-    lat: 41.869983
-    lon: -87.650286
-  ins_id: move_5
+    lat: 41.870063
+    lon: -87.650161
+  ins_id: move_0
   aoi_id: rnp5
-  end_time: 41.4
+  end_time: 23.86
 - type: move_to_location
   location:
-    lat: 41.869982
-    lon: -87.650249
-  ins_id: move_6
+    lat: 41.870074
+    lon: -87.65019
+  ins_id: move_1
   aoi_id: rnp6
-  end_time: 47.5
+  end_time: 37.33
 - type: move_to_location
   location:
-    lat: 41.869977
-    lon: -87.6502
-  ins_id: move_7
+    lat: 41.870084
+    lon: -87.650212
+  ins_id: move_2
   aoi_id: rnp7
-  end_time: 55.7
-- type: move_to_location
-  location:
-    lat: 41.869971
-    lon: -87.650152
-  ins_id: move_8
-  aoi_id: rnp8
-  end_time: 63.800000000000004
+  end_time: 48.0
 - type: allow_land_on_UGV
   location:
-    lat: 41.869971
-    lon: -87.650152
+    lat: 41.870084
+    lon: -87.650212
   ins_id: land_1
-  end_time: 104.2
+  aoi_id: rnp7
+  end_time: 68.0
 sortie 3:
 - type: allow_take_off_from_UGV
   location:
-    lat: 41.869971
-    lon: -87.650152
+    lat: 41.870084
+    lon: -87.650212
   ins_id: take_off_1
-  end_time: 20.0
+  aoi_id: rnp7
+  end_time: 11
 - type: allow_land_on_UGV
   location:
-    lat: 41.869971
-    lon: -87.650152
+    lat: 41.870084
+    lon: -87.650212
   ins_id: land_1
-  end_time: 63.8
+  aoi_id: rnp7
+  end_time: 31
+sortie 4:
+- type: allow_take_off_from_UGV
+  location:
+    lat: 41.870084
+    lon: -87.650212
+  ins_id: take_off_1
+  aoi_id: rnp7
+  end_time: 11
+- type: move_to_location
+  location:
+    lat: 41.870096
+    lon: -87.650241
+  ins_id: move_0
+  aoi_id: rnp8
+  end_time: 24.74
+- type: allow_land_on_UGV
+  location:
+    lat: 41.870096
+    lon: -87.650241
+  ins_id: land_1
+  aoi_id: rnp8
+  end_time: 44.74
+sortie 5:
+- type: allow_take_off_from_UGV
+  location:
+    lat: 41.870096
+    lon: -87.650241
+  ins_id: take_off_1
+  aoi_id: rnp8
+  end_time: 11
+- type: allow_land_on_UGV
+  location:
+    lat: 41.870096
+    lon: -87.650241
+  ins_id: land_1
+  aoi_id: rnp8
+  end_time: 31
+sortie 6:
+- type: allow_take_off_from_UGV
+  location:
+    lat: 41.870096
+    lon: -87.650241
+  ins_id: take_off_1
+  aoi_id: rnp8
+  end_time: 11

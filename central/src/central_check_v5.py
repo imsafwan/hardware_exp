@@ -9,8 +9,37 @@ import subprocess
 import time
 import yaml
 import os
+import logging
+import datetime
 
-print('begin central server')
+
+# ensure log directory exists
+LOG_DIR = "logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+LOG_FILE = os.path.join(LOG_DIR, f"central_plan_{timestamp}.log")
+
+logging.basicConfig(
+    filename=LOG_FILE,   # now stored inside logs/
+    level=logging.INFO,  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+
+logger = logging.getLogger("central")
+
+def logger_print(msg, level="info"):
+    print(msg)
+    if level == "info":
+        logger.info(msg)
+    elif level == "warn":
+        logger.warn(msg)
+    elif level == "error":
+        logger.error(msg)
+    elif level == "debug":
+        logger.debug(msg)
+
+logger_print('begin central server')
 
 # === Config ===
 UAV_HOST = "192.168.10.120"
@@ -78,7 +107,7 @@ def run_remote(host, user, passwd, cmd):
         ssh.connect(host, username=user, password=passwd)
         ssh.exec_command(cmd)
     except Exception as e:
-        print(f"SSH error for {host}: {e}")
+        logger_print(f"SSH error for {host}: {e}")
     finally:
         ssh.close()
 
@@ -89,7 +118,7 @@ def create_socket(port):
     return sock
 
 def pretty_print(agent, msg):
-    print(f"\nMessage from {agent}: {msg}")
+    logger_print(f"\nMessage from {agent}: {msg}")
 
 def all_success(status_dict):
     return status_dict and all(v.get("status") == "SUCCESS" for v in status_dict.values())
@@ -127,7 +156,7 @@ def start_local_tasks():
     """Start local UAV/UGV tasks in tmux sessions."""
     try:
         # Start UAV task
-        '''subprocess.run([
+        subprocess.run([
             "tmux", "kill-session", "-t", UAV_SESSION
         ], stderr=subprocess.DEVNULL)
         
@@ -135,7 +164,7 @@ def start_local_tasks():
             "tmux", "new-session", "-d", "-s", UAV_SESSION,
             "bash", "-c", 
             "cd ~/hardware_exp/uav_control/src && ./uav_task.sh; exec bash"
-        ])'''
+        ])
         
         # Start UGV task  
         subprocess.run([
@@ -148,10 +177,10 @@ def start_local_tasks():
             "cd ~/hardware_exp/ugv_control/src && ./ugv_task.sh; exec bash"
         ])
         
-        print("Started UAV and UGV tasks in tmux sessions")
+        logger_print("Started UAV and UGV tasks in tmux sessions")
         
     except Exception as e:
-        print(f"Error starting local tasks: {e}")
+        logger_print(f"Error starting local tasks: {e}")
 
 def start_planners():
     """Start the planner processes in tmux sessions."""
@@ -176,26 +205,26 @@ def start_planners():
             "tmux", "select-layout", "-t", "planners", "even-horizontal"
         ])
         
-        print("Started planners in tmux session 'planners'")
+        logger_print("Started planners in tmux session 'planners'")
         
     except subprocess.CalledProcessError as e:
-        print(f"Error starting planners in tmux: {e}")
+        logger_print(f"Error starting planners in tmux: {e}")
         # Fallback to background processes
         try:
             subprocess.Popen(["python3", "initial_plan.py"])
             subprocess.Popen(["python3", "replanner1.py"])
-            print("Fallback: Started planners as background processes")
+            logger_print("Fallback: Started planners as background processes")
         except Exception as fallback_error:
-            print(f"Fallback also failed: {fallback_error}")
+            logger_print(f"Fallback also failed: {fallback_error}")
             
     except Exception as e:
-        print(f"Unexpected error starting planners: {e}")
+        logger_print(f"Unexpected error starting planners: {e}")
 
 def cleanup():
     """Kill all tmux sessions."""
     try:
         # Kill all tmux sessions
-        #subprocess.run(["tmux", "kill-session", "-t", UAV_SESSION], stderr=subprocess.DEVNULL)
+        subprocess.run(["tmux", "kill-session", "-t", UAV_SESSION], stderr=subprocess.DEVNULL)
         subprocess.run(["tmux", "kill-session", "-t", UGV_SESSION], stderr=subprocess.DEVNULL)
         subprocess.run(["tmux", "kill-session", "-t", "planners"], stderr=subprocess.DEVNULL)
         
@@ -203,10 +232,10 @@ def cleanup():
         # run_remote(UGV_HOST, UGV_USER, UGV_PASS, f"tmux kill-session -t {UGV_SESSION}")
         # run_remote(UAV_HOST, UAV_USER, UAV_PASS, f"tmux kill-session -t {UAV_SESSION}")
         
-        print("Cleaned up all tmux sessions")
+        logger_print("Cleaned up all tmux sessions")
         
     except Exception as e:
-        print(f"Cleanup error: {e}")
+        logger_print(f"Cleanup error: {e}")
 
 
 
@@ -245,7 +274,7 @@ def update_scene_yaml(visit_status, file_path="Inputs/scene.yaml"):
     with open(file_path, "w") as f:
         yaml.safe_dump(scene, f, sort_keys=False)
 
-    print(f"Updated {file_path}")
+    logger_print(f"Updated {file_path}")
 
 
 
@@ -265,13 +294,16 @@ def main():
     # Create UDP sockets
     sock_uav = create_socket(UAV_PORT)
     sock_ugv = create_socket(UGV_PORT)
-    print(f"Central listening on ports -> UAV:{UAV_PORT}, UGV:{UGV_PORT}")
+    logger_print(f"Central listening on ports -> UAV:{UAV_PORT}, UGV:{UGV_PORT}")
 
     sortie_number = 1
 
-    #if sortie_number == 1:
+    if sortie_number == 1:
         # 0. Solve the scene once before starting
         #subprocess.run(["python3", "solver_heu.py"], check=True)
+        subprocess.run(["python3", "solver_RL.py"], check=True)
+        
+        
 
     mission_start_time = get_sim_time_from_file()
 
@@ -279,12 +311,13 @@ def main():
 
         while True:
             
-            print('<--------- Executing one sortie --------->')
+            logger_print('<--------- Executing one sortie --------->')
 
             # 1. Start UAV-UGV tasks
             start_local_tasks()
             time.sleep(2)
-
+            
+            sortie_start_time = get_sim_time_from_file()
             # 2. Send initial plan and start replanner
             start_planners()
 
@@ -306,7 +339,7 @@ def main():
                         data, addr = s.recvfrom(BUFFER_SIZE)
                         msg = json.loads(data.decode())
                     except json.JSONDecodeError:
-                        print(f"Invalid JSON from {addr}: {data}")
+                        logger_print(f"Invalid JSON from {addr}: {data}")
                         continue
 
                     agent = "UAV" if s is sock_uav else "UGV"
@@ -330,10 +363,15 @@ def main():
                                         get_sim_time_from_file() - mission_start_time, 3
                                     )
 
-                    # 4. Check if both tasks completed successfully
-                    if all_success(uav_task_status) and all_success(ugv_task_status):
-                        print("\n\n---------------- Sortie completed! -----------------\n\n")
-                        print("visit status --->", visit_status)
+                    # 4. Check if both tasks completed successfully (handle empty dicts as True)
+                    if (
+                            (not uav_task_status or all_success(uav_task_status)) and
+                            (not ugv_task_status or all_success(ugv_task_status)) and
+                            (uav_task_status or ugv_task_status)   # ensure not both are empty
+                        ):
+                        logger_print("\n\n---------------- Sortie completed! -----------------\n\n")
+                        logger_print("visit status --->", visit_status)
+                        logger_print('Sortie took around {} sec'.format(get_sim_time_from_file() - sortie_start_time))
 
                         # Save AoI status and cleanup
                         save_aoi_status(aoi_status)
@@ -352,9 +390,9 @@ def main():
 
                         def replan_thread():
                             if all(v == "COMPLETED" for v in aoi_status.values()):
-                                print("All points are visited")
+                                logger_print("All points are visited")
                             else:
-                                subprocess.run(["python3", "solver_heu.py"], check=True)
+                                subprocess.run(["python3", "solver_RL.py"], check=True)
 
                         t1 = threading.Thread(target=recharge_thread, daemon=True)
                         t2 = threading.Thread(target=replan_thread, daemon=True)
@@ -363,7 +401,7 @@ def main():
                         t1.join()
                         t2.join()
 
-                        print("\n\n---------------- replan & recharge completed! -----------------\n\n")
+                        logger_print("\n\n---------------- replan & recharge completed! -----------------\n\n")
                         one_sortie_complete = True
                         break  # break inner sortie loop
                 
@@ -373,15 +411,15 @@ def main():
 
             # After sortie, check if mission is complete
             if all(v == "COMPLETED" for v in aoi_status.values()):
-                print("Mission end")
-                print('Mission took around {} sec'.format(get_sim_time_from_file() - mission_start_time))
+                logger_print("Mission end")
+                logger_print('Mission took around {} sec'.format(get_sim_time_from_file() - mission_start_time))
                 break  # break outer while loop
         
             else:
-                print('mission continuing')
+                logger_print('mission continuing')
 
     except KeyboardInterrupt:
-        print("\nCentral server interrupted by user. Cleaning up...")
+        logger_print("\nCentral server interrupted by user. Cleaning up...")
         cleanup()
         sys.exit(1)
 

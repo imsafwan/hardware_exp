@@ -82,6 +82,8 @@ async def goto_gps_target_modi_2(
     logger_print(f"Navigating to NED (N:{tgt_n:.2f} E:{tgt_e:.2f}) @ rel Alt:{target_alt:.2f}")
 
     await drone.offboard.set_velocity_body(VelocityBodyYawspeed(0,0,0,0))
+    await drone.offboard.set_velocity_body(VelocityBodyYawspeed(0,0,0,0))
+    await drone.offboard.set_velocity_body(VelocityBodyYawspeed(0,0,0,0))
     try:
         await drone.offboard.start()
         logger_print("Offboard started")
@@ -185,7 +187,7 @@ async def land(drone):
 
 # ------------------- Vision-Based Landing ------------------- #
 
-async def vision_landing(drone, camera_index="/dev/video0", target_align_altitude=3.0):
+async def vision_landing(drone, camera_index="/dev/video0", target_align_altitude=1.5):
     logger_print(" Starting vision-based landing...")
 
     # --- Camera setup ---

@@ -50,13 +50,10 @@ def haversine(coord1, coord2):
     R = 6371000  # Earth radius in meters
     lat1, lon1 = map(math.radians, coord1)
     lat2, lon2 = map(math.radians, coord2)
-
     dlat = lat2 - lat1
     dlon = lon2 - lon1
-
     a = math.sin(dlat/2.0)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2.0)**2
     c = 2 * math.asin(math.sqrt(a))
-
     return R * c  # meters, Python float
 
 
@@ -165,7 +162,7 @@ class Major_Replan():
         self.Mission_elapsed_time = 0
         self.Locations = Locations
         self.starting = starting
-        self.Fuel_limit = 110 #int(1.5*60)  # min*60 = secs
+        
          
         self.UAV_Mission_time = 0
         self.UAV_node_visit = [starting]
@@ -178,7 +175,7 @@ class Major_Replan():
         self.metaheuristics = metaheuristics
         self.starting_depot = starting 
         self.recharging = 0
-        self.ugv_speed = 0.5  # m/sec
+        self.ugv_speed = 0.2  # m/sec
         self.uav_speed = 0.9    # m/sec
         self.UAV_starting_point = [starting]
         self.UGV_starting_point = [starting]
@@ -198,8 +195,9 @@ class Major_Replan():
 
         self.scale_up_f = 100
 
-        self.takeoff_time = 20 # sec
-        self.landing_time = 30 # sec
+        self.Fuel_limit = 90 #int(1.5*60)  # min*60 = secs 
+        self.takeoff_time = 11 # sec
+        self.landing_time = 20 # sec
         self.Fuel_limit_flying = self.Fuel_limit - self.takeoff_time - self.landing_time 
 
         # action yaml #
@@ -1242,6 +1240,7 @@ def run_scenario_with_metaheuristic(metaheuristic, folder_name, plotting, scale,
         No_of_times = 0  # in any case if it enters in infinite loop, it will break after 15 iterations
         while len(dropped_locs) != 0 : 
             print('solving uav sorties --->')
+            Task_points_of_SP = list(set(Task_points_of_SP))  # remove dulicate points
             sortie_time, dropped_locs = replan.UAV_planner(starting_location, Task_points_of_SP, UGV_end_stop, UGV_end_stop_time)
             print('UAV sortie time = {} min'.format(round(sortie_time/60, 2)))
             Task_points_of_SP = dropped_locs

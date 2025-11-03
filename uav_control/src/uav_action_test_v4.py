@@ -49,24 +49,6 @@ ugv_status = {}
 
 
 
-# def get_sim_time_from_file(filename="/home/safwan/hardware_exp/central/src/clock_log.txt"):
-#     # keep a static variable to store last valid time
-#     if not hasattr(get_sim_time_from_file, "last_time"):
-#         get_sim_time_from_file.last_time = None
-
-#     try:
-#         with open(filename, "r") as f:
-#             line = f.read().strip()
-#             if line:
-#                 get_sim_time_from_file.last_time = float(line)
-#                 return get_sim_time_from_file.last_time
-#     except Exception as e:
-#         # could add logging here if you want
-#         pass
-
-#     # fallback to last valid time if reading failed
-#     return get_sim_time_from_file.last_time
-
 def get_sim_time_from_file(filename="/home/safwan/hardware_exp/central/src/clock_log.txt", retry_delay=0.05, timeout=5.0):
     start = time.time()
     while True:
@@ -125,7 +107,7 @@ def update_AoI_status_file(AoI_id, status="COMPLETED"):
 
 
 
-async def status_broadcaster(drone, action_queue, sortie_start_time, period=0.1):
+async def status_broadcaster(drone, action_queue, current_action,  sortie_start_time, period=0.1):
     """Continuously broadcast UAV status every `period` seconds."""
     while True:
         try:
@@ -135,15 +117,26 @@ async def status_broadcaster(drone, action_queue, sortie_start_time, period=0.1)
 
             # Compute elapsed mission time
             time_elapsed = get_sim_time_from_file() - sortie_start_time
+            current_action_loc = current_action.get("value", {}).get("location", None)
+            if current_action_loc is not None:
+                curr_p = (current_action_loc['lat'], current_action_loc['lon'])
+            else:
+                curr_p = None
 
             # Remaining actions
             remaining = list(action_queue)  # shallow copy
+            if len(remaining) >= 1:
+                        next_p = (remaining[0]['location']['lat'], remaining[0]['location']['lon'])
+            else:
+                        next_p = None
 
             msg = {
                 "msg_type": "STATUS",
                 "sender": "UAV",
                 "uav_state": {
                     "loc": gps,
+                    "next_p": next_p,
+                    "curr_p": curr_p,
                     "time_elapsed": time_elapsed
                 },
                 "uav_remaining_actions": remaining,
@@ -185,6 +178,8 @@ def check_for_new_plan(current_plan_id, action_queue, uav_task_status):
                     logger_print(f"New plan {plan_id} received")
                     current_plan_id = plan_id
 
+                    logger_print(f" New plan: {msg['new_plan']} \n")
+
                     # Replace the queue with the new plan
                     action_queue.clear()
                     action_queue.extend(msg["new_plan"])
@@ -215,6 +210,7 @@ def check_for_new_plan(current_plan_id, action_queue, uav_task_status):
 
 # ---------------- Action Executor ----------------
 async def execute_action(drone, action, ref_lat, ref_lon, ref_alt, offset_n, offset_e):
+
     action_type = action["type"]
     try:
         if action_type == "takeoff_from_UGV":
@@ -246,11 +242,6 @@ async def execute_action(drone, action, ref_lat, ref_lon, ref_alt, offset_n, off
                         # time.sleep(5)
                         # success = True
                         success = await vision_landing(drone) #land(drone)  # or vision_landing(drone)
-
-
-                        
-
-
                         break
                 except Exception:
                     continue
@@ -276,7 +267,7 @@ async def run():
             break
 
     # record gps
-    asyncio.create_task(record_gps_uav(drone, time.time()))
+    asyncio.create_task(record_gps_uav(drone, get_sim_time_from_file()))
 
     ref_pos = await drone.telemetry.position().__anext__()
     ref_lat, ref_lon, ref_alt = ref_pos.latitude_deg, ref_pos.longitude_deg, ref_pos.absolute_altitude_m
@@ -284,12 +275,13 @@ async def run():
     offset_n, offset_e = pv.position.north_m, pv.position.east_m
 
     action_queue = deque()
+    current_action = {"value": None}
     uav_task_status = {}
     current_plan_id = 0
     uav_takeoff_time = get_sim_time_from_file()
 
     # Start background status broadcaster
-    asyncio.create_task(status_broadcaster(drone, action_queue, uav_takeoff_time))
+    asyncio.create_task(status_broadcaster(drone, action_queue, current_action,  uav_takeoff_time))
 
     # === Execution Loop ===
     while True:
@@ -301,6 +293,7 @@ async def run():
 
         if action_queue:
             action = action_queue.popleft()
+            current_action["value"] = action
             action_id = action.get("ins_id", f"uav_{int(get_sim_time_from_file())}")
             logger_print(f"Executing {action_id}: {action['type']}")
 
@@ -308,6 +301,7 @@ async def run():
             success = await execute_action(drone, action, ref_lat, ref_lon, ref_alt, offset_n, offset_e)
             exe_time = get_sim_time_from_file() - start_time
             logger_print(' Time takes to execute action {}: {:.1f}s'.format(action, exe_time))
+            logger_print('Action executed at time: {:.1f}s \n'.format(get_sim_time_from_file()-uav_takeoff_time))
 
             # Update status + report to manager
             uav_task_status[action_id] = {"type": action["type"], "status": "SUCCESS" if success else "FAILED"}
@@ -327,7 +321,7 @@ async def run():
                     logger_print(' uav_time_elapsed: {:.1f}s, action end_time: {:.1f}s'.format(uav_time_elapsed, action["end_time"]))
                     if uav_time_elapsed > action["end_time"]:
                         send_replan_request("Exceeded expected action time")
-                        await asyncio.sleep(1.0)
+                        await asyncio.sleep(2.0)
 
 
             if not success:
