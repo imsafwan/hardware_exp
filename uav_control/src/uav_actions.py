@@ -101,10 +101,19 @@ async def goto_gps_target_modi_2(
             cur_e = pv.position.east_m
             rel_z = gps.relative_altitude_m
 
+            noise_n = np.random.normal(0, 0.5)   # mean=0, std=0.5m
+            noise_e = np.random.normal(0, 0.5)
+
+            cur_n_noisy = cur_n + noise_n
+            cur_e_noisy = cur_e + noise_e
+
+            dn = tgt_n - cur_n_noisy
+            de = tgt_e - cur_e_noisy
+
             #logger_print('GPS: lat:{:.6f} lon:{:.6f}'.format(gps.latitude_deg, gps.longitude_deg))
 
-            dn = tgt_n - cur_n
-            de = tgt_e - cur_e
+            # dn = tgt_n - cur_n
+            # de = tgt_e - cur_e
             dist_xy = math.hypot(dn, de)
             #logger_print(f" Distance to target XY: {dist_xy:.2f} m")
 
@@ -121,6 +130,13 @@ async def goto_gps_target_modi_2(
                 ve = (de / dist_xy) * speed_mps
             else:
                 vn = ve = 0.0
+            
+            if np.random.random() < 0.1:  # 5% chance per cycle
+                gust_n = np.random.uniform(-1.2, 1.2)
+                gust_e = np.random.uniform(-1.2, 1.2)
+                vn += gust_n
+                ve += gust_e
+                logger_print('Wind gust applied')
 
             #logger_print(f"z:{rel_z:.2f}m   XY:{dist_xy:.2f}m  AltErr:{alt_err:.2f}m  vn:{vn:.2f} ve:{ve:.2f} vd:{vd:.2f}")
             await drone.offboard.set_velocity_ned(VelocityNedYaw(vn, ve, vd, 0.0))
@@ -187,7 +203,7 @@ async def land(drone):
 
 # ------------------- Vision-Based Landing ------------------- #
 
-async def vision_landing(drone, camera_index="/dev/video0", target_align_altitude=1.5):
+async def vision_landing(drone, camera_index="/dev/video0", target_align_altitude=3.0):
     logger_print(" Starting vision-based landing...")
 
     # --- Camera setup ---

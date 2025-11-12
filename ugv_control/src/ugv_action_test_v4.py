@@ -254,7 +254,7 @@ class UGVActionRunner(Node):
                         "loc": [current_loc["lat"], current_loc["lon"]],
                         "next_road_point": next_rp,
                         'curr_road_point': curr_rp,
-                        "time_elapsed": get_sim_time_from_file() - self.ugv_start_time
+                        "time_elapsed": get_sim_time_from_file() - self.ugv_start_time + 2.00 # as we add 2 secs of sleep for this replanning
                     }
 
                 msg = {
@@ -288,6 +288,7 @@ class UGVActionRunner(Node):
                         if plan_id > self.current_plan_id:
                             logger_print(f"📥 New plan {plan_id} received")
                             self.current_plan_id = plan_id
+                            logger_print(f" New plan: {msg['new_plan']} \n")
                             
                             # Update plan
                             self.action_queue.clear()
@@ -454,11 +455,12 @@ class UGVActionRunner(Node):
         self.update_status_file()
         
         # Check timing
-        elapsed = get_sim_time_from_file() - self.ugv_start_time
-        #logger_print(f'\n Time elapsed: {elapsed}\n')
-        if "end_time" in action and elapsed > action["end_time"]:
-            self.send_replan_request(f"Exceeded end_time {action['end_time']}", action_id)
-            time.sleep(2.0)  # wait for replan
+        elapsed = get_sim_time_from_file() - self.ugv_start_time           
+        logger_print(f"\n UGV time elapsed: {elapsed}, action end time {action['end_time']}\n")
+        # if len(list(self.action_queue)) >=2 and action['type'] != 'allow_take_off_from_UGV': # if len = 1, that means remaining actions = move+land pair and if len = 0 , then only land. also not applicable for takeoff
+        #    if "end_time" in action and elapsed > action["end_time"]:
+        #     self.send_replan_request(f"Exceeded end_time {action['end_time']}", action_id)
+        #     time.sleep(2.0)  # wait for replan
             
         return success
 
@@ -478,6 +480,7 @@ class UGVActionRunner(Node):
                 st_time = get_sim_time_from_file()
                 success = self.execute_action(action)
                 exe_time = get_sim_time_from_file() - st_time
+
                 logger_print(f"mission_time_elapsed: {get_sim_time_from_file()-self.ugv_start_time}")
                 logger_print(' Time takes to execute action {}: {:.1f}s'.format(action, exe_time))
                 
@@ -505,10 +508,9 @@ def main():
     rclpy.init()
     
     # Configuration
-    map_origin = (41.87, -87.650411)
+    map_origin = (41.86997, -87.65018899999995)  #  3. (41.870041, -87.650036)   2. (41.86997, -87.65018899999995)   1. #(41.87, -87.650411)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     actions_yaml = os.path.join(script_dir, '../config/ugv_actions.yaml')
-    
     ugv_runner = UGVActionRunner(actions_yaml, map_origin)
     
     try:

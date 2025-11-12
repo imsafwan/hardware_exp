@@ -24,7 +24,7 @@ class UAV_UGV_Env(gym.Env):
          self.ugv_speed = 0.2   # m/sec constant
          self.prv_action = [None] * self.batch_size                            
          self.mission_points = None
-         self.uav_fuel_constant = 55 # sec
+         self.uav_fuel_constant = 58 # sec
          self.unit_factor = 1
          
          

@@ -137,7 +137,7 @@ async def status_broadcaster(drone, action_queue, current_action,  sortie_start_
                     "loc": gps,
                     "next_p": next_p,
                     "curr_p": curr_p,
-                    "time_elapsed": time_elapsed
+                    "time_elapsed": time_elapsed + 2.00 # as we add 2 secs of sleep for this replanning
                 },
                 "uav_remaining_actions": remaining,
                 "time": get_sim_time_from_file()
@@ -221,7 +221,7 @@ async def execute_action(drone, action, ref_lat, ref_lon, ref_alt, offset_n, off
                 drone,
                 action["location"]["lat"], action["location"]["lon"], 7,
                 ref_lat, ref_lon, ref_alt,
-                speed_mps=1.0, arrival_thresh=0.25,
+                speed_mps=0.765, arrival_thresh=0.25,
                 offset_n=offset_n, offset_e=offset_e
             )
 
@@ -314,14 +314,14 @@ async def run():
                 update_AoI_status_file(action['aoi_id'])
             
 
-            # Local trigger: exceeded expected end_time
-            if len(list(action_queue)) >=2 : # if len = 1, that means remaining actions = move+land pair and if len = 0 , then only land.
-                if "end_time" in action:
-                    uav_time_elapsed = get_sim_time_from_file() - uav_takeoff_time
-                    logger_print(' uav_time_elapsed: {:.1f}s, action end_time: {:.1f}s'.format(uav_time_elapsed, action["end_time"]))
-                    if uav_time_elapsed > action["end_time"]:
-                        send_replan_request("Exceeded expected action time")
-                        await asyncio.sleep(2.0)
+            #Local trigger: exceeded expected end_time
+            # if len(list(action_queue)) >=2 : # if len = 1, that means remaining actions = move+land pair and if len = 0 , then only land.
+            #     if "end_time" in action:
+            #         uav_time_elapsed = get_sim_time_from_file() - uav_takeoff_time
+            #         logger_print(' uav_time_elapsed: {:.1f}s, action end_time: {:.1f}s'.format(uav_time_elapsed, action["end_time"]))
+            #         if uav_time_elapsed > action["end_time"]:
+            #             send_replan_request("Exceeded expected action time")
+            #             await asyncio.sleep(2.0)
 
 
             if not success:

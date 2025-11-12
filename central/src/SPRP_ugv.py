@@ -5,6 +5,7 @@ from geopy.distance import geodesic
 import logging
 from scenario_helper import ScenarioParameters
 
+
 scene = ScenarioParameters('Inputs/scene.yaml')
 
 
@@ -60,6 +61,7 @@ def find_nearest_node(graph, loc):
 
 
 #---------------------------------------------------------------------------------#  
+uav_full_flying_time = 100 # sec
 uav_flying_time = 90 # sec = min*60
 uav_velocity = 0.9 # m/s
 land_time = 20.0 # seconds
@@ -69,13 +71,12 @@ ugv_velocity = 0.2 # m/s
 
 
 
-
 def ugv_needs_replan(uav_state, ugv_state, uav_actions, ugv_actions, road_network):
     
     uav_actions = deepcopy(uav_actions)
     ugv_actions = deepcopy(ugv_actions)
 
-    old_land_loc = uav_actions[-2]["location"]
+    old_land_loc = uav_actions[-1]["location"]
 
     uav_loc = uav_state["loc"]
     uav_elapsed = uav_state["time_elapsed"]
@@ -87,6 +88,7 @@ def ugv_needs_replan(uav_state, ugv_state, uav_actions, ugv_actions, road_networ
     #     ugv_state["next_road_point"] = nearest_node
 
     ugv_next_road_point, _ = find_nearest_node(road_network, ugv_loc) #ugv_state["next_road_point"]
+    ugv_next_road_point_id = get_node_id(road_network, ugv_next_road_point)
 
     dist_cur_loc_2_nxt_road = haversine_distance(ugv_loc, ugv_next_road_point)
 
@@ -99,7 +101,7 @@ def ugv_needs_replan(uav_state, ugv_state, uav_actions, ugv_actions, road_networ
     old_land_node_id = get_node_id(road_network, node_coord)
 
     
-    dist_to_ugv =  nx.shortest_path_length(road_network, ugv_next_road_point, old_land_node_id, weight="weight")   # meters
+    dist_to_ugv =  nx.shortest_path_length(road_network, ugv_next_road_point_id, old_land_node_id, weight="weight")   # meters
     total_dist_to_ugv = dist_to_ugv + dist_cur_loc_2_nxt_road
     time_ugv = total_dist_to_ugv / ugv_velocity
 
@@ -124,7 +126,7 @@ def ugv_needs_replan(uav_state, ugv_state, uav_actions, ugv_actions, road_networ
     actions_trim = uav_actions[:-2].copy()  # remove last move + land pair (to try new land first)
     found = False
 
-    # 1️⃣ Rollback search (if actions exist)
+    #  Rollback search (if actions exist)
     if actions_trim:
         k = len(actions_trim)
         for i in range(k, -1, -1):
@@ -136,7 +138,7 @@ def ugv_needs_replan(uav_state, ugv_state, uav_actions, ugv_actions, road_networ
                 return candidate_seq + [move_to_new_rp, new_land], f"ROLLOUT_NEW_R (trimmed to {i})"
         logger.info("no feasible rp found after rollback trimming")
 
-    # 2️⃣ Try fresh rendezvous (no trimming)
+    #  Try fresh rendezvous (no trimming)
     feasible, new_rp = find_new_rp([], uav_state, candidate_rendezvous_points)
     if feasible:
         move_to_new_rp = {"type": "move_to_location", "ins_id": "move_new", "location": new_rp}
@@ -145,12 +147,13 @@ def ugv_needs_replan(uav_state, ugv_state, uav_actions, ugv_actions, road_networ
 
     logger.info("cannot find new rp — trying relaxed endurance (0.95× full)")
 
-    # 3️⃣ Relax endurance
-    relaxed_endurance = 0.95 * (uav_flying_time / 0.9)
+    # Relax endurance
+    relaxed_uav_state = deepcopy(uav_state)
     prev_endurance = globals()["uav_flying_time"]
-    globals()["uav_flying_time"] = relaxed_endurance
+    globals()["uav_flying_time"] = 0.95 * uav_full_flying_time
 
-    feasible_relaxed, new_rp_relaxed = find_new_rp([], uav_state, candidate_rendezvous_points)
+    candidate_rendezvous_points = compute_candidate_points(uav_state, ugv_state, road_network)
+    feasible_relaxed, new_rp_relaxed = find_new_rp([], relaxed_uav_state, candidate_rendezvous_points)
     globals()["uav_flying_time"] = prev_endurance
 
     if feasible_relaxed:
@@ -161,7 +164,7 @@ def ugv_needs_replan(uav_state, ugv_state, uav_actions, ugv_actions, road_networ
 
     logger.info("still no feasible rp after relaxation")
 
-    # 4️⃣ Nothing worked
+    #  Nothing worked
     return [], "GLOBAL_REPLAN"
 
 
@@ -392,7 +395,7 @@ def create_ugv_plan(ugv_state, new_rp, road_network):
     elapsed += land_time
     ugv_plan.append({
         "type": "allow_land_on_UGV",
-        "ins_id": "land_new",
+        "ins_id": "land_1",
         "location": {"lat": new_rp["lat"], "lon": new_rp["lon"]},
         'end_time': elapsed
     })

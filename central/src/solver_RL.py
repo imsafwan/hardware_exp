@@ -23,8 +23,8 @@ def to_serializable(obj):
 # Add both central/src and RL_Inference to Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))  # adds src/
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "RL_Inference"))
-import RL_Inference
 
+import RL_Inference
 from RL_Inference.sampling_evaluation import run_inference
 
 # Get the directory of the current script (where scene.yaml is located)

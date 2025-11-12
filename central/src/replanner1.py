@@ -12,6 +12,7 @@ import os
 import logging
 from scenario_helper import ScenarioParameters
 import yaml
+import traceback
 
 class NoAliasDumper(yaml.SafeDumper):
     def ignore_aliases(self, data):
@@ -69,7 +70,20 @@ def haversine_distance(coord1, coord2):
     return R * c
 
 
+def get_sim_time_from_file(filename="/home/safwan/hardware_exp/central/src/clock_log.txt", retry_delay=0.05, timeout=5.0):
+    start = time.time()
+    while True:
+        try:
+            with open(filename, "r") as f:
+                line = f.read().strip()
+                if line:
+                    return float(line)
+        except Exception:
+            pass
 
+        if time.time() - start > timeout:
+            raise RuntimeError("Timeout: could not read sim time from file.")
+        time.sleep(retry_delay)
 #----------------------------------------------#
 
 scene = ScenarioParameters('Inputs/scene.yaml')
@@ -90,6 +104,12 @@ for u, v, data in scene_road_network.edges(data=True):
         scene.corrd_to_id_map[v],
         weight=data['weight']
     )
+
+
+# dist_to_ugv =  nx.shortest_path_length(road_network, 'rnp4', 'rnp7', weight="weight")
+# print(  (haversine_distance((41.87000108659332, -87.65032471534934), (41.869983, -87.650322))) /0.2 )
+# print(dist_to_ugv)
+# kkk
 
 
 
@@ -122,15 +142,31 @@ def setup_socket(port):
     sock.setblocking(False)
     return sock
 
-def send_with_ack(msg, target_ip, target_port, agent_name, max_retries=100, timeout=1.0):
+def send_with_ack(msg, target_ip, target_port, agent_name, max_retries=100, timeout=0.5):
     """Send msg and wait for ACK from agent"""
     sock_ack = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock_ack.bind(("0.0.0.0", 6000))   
     sock_ack.settimeout(timeout)
+    attempt = 0
 
-    
+    # for attempt in range(max_retries):
+    #     # Send message
+    #     sock_tx.sendto(msg, (target_ip, target_port))
+    #     logger_print(f"→ Sent {msg[:50]}... to {agent_name} (attempt {attempt+1})")
 
-    for attempt in range(max_retries):
+    #     try:
+    #         data, _ = sock_ack.recvfrom(4096)
+    #         ack = json.loads(data.decode())
+    #         if ack.get("msg_type") == "ACK" and ack.get("plan_id") == json.loads(msg.decode())["plan_id"]:
+    #             logger_print(f"✅ ACK received from {agent_name}")
+    #             sock_ack.close()
+    #             return True
+    #     except socket.timeout:
+    #         logger_print(f"⚠️ No ACK from {agent_name}, retrying...")
+
+    st_time = get_sim_time_from_file()
+    while get_sim_time_from_file()-st_time < 1.5 : # 1.5 sec
+        attempt += 1
         # Send message
         sock_tx.sendto(msg, (target_ip, target_port))
         logger_print(f"→ Sent {msg[:50]}... to {agent_name} (attempt {attempt+1})")
@@ -144,6 +180,7 @@ def send_with_ack(msg, target_ip, target_port, agent_name, max_retries=100, time
                 return True
         except socket.timeout:
             logger_print(f"⚠️ No ACK from {agent_name}, retrying...")
+
 
     logger_print(f"❌ Failed to deliver plan to {agent_name} after {max_retries} retries")
     sock_ack.close()
@@ -168,13 +205,21 @@ def send_plans(agent_name):
                     ugv_remaining_actions = global_state['UGV'].get('ugv_remaining_actions', [])
                     uav_plan, ugv_plan = uav_is_replanning(uav_state, ugv_state, uav_remaining_actions, ugv_remaining_actions, road_network)
 
-    else:
+    else:       
+        try:
                     uav_state = global_state['UAV']['uav_state']
                     ugv_state = global_state['UGV']['ugv_state']
                     uav_remaining_actions = global_state['UAV'].get('uav_remaining_actions', [])
                     ugv_remaining_actions = global_state['UGV'].get('ugv_remaining_actions', [])
+                    if len(uav_remaining_actions) < 2:
+                        logger_print('No need of replan as UAV is already ready to land')
+                        return
+                    logger_print('Road network {}'.format(road_network))
                     uav_plan, ugv_plan = ugv_is_replanning(uav_state, ugv_state, uav_remaining_actions, ugv_remaining_actions, road_network)
-        
+                    logger_print('UGV sucessfully replan')
+        except Exception as e:
+            logger_print("Error during UGV replanning:")
+            logger_print(traceback.format_exc())
     
     # Send to UAV
     msg_uav = json.dumps({"msg_type": "UAV_PLAN", "plan_id": plan_id, "new_plan": uav_plan}).encode()
@@ -198,7 +243,7 @@ def send_plans(agent_name):
     with open(os.path.join("output", "ugv_actions.yaml"), "w") as f:
         yaml.dump({'sortie 1':ugv_plan}, f, Dumper=NoAliasDumper, sort_keys=False)
 
-    print("Saved uav_actions.yaml and ugv_actions.yaml in output/")
+    logger_print("Saved uav_actions.yaml and ugv_actions.yaml in output/")
 
 # ---------------- Listeners ---------------- #
 def listen_replan(sock, agent_name):
