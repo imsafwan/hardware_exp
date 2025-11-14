@@ -9,6 +9,8 @@ from mavsdk.offboard import OffboardError, VelocityNedYaw, VelocityBodyYawspeed
 import os
 from datetime import datetime
 import logging
+from mavsdk.telemetry import FlightMode
+
 
 
 logger = logging.getLogger(__name__)   # module-level logger
@@ -101,19 +103,19 @@ async def goto_gps_target_modi_2(
             cur_e = pv.position.east_m
             rel_z = gps.relative_altitude_m
 
-            noise_n = np.random.normal(0, 0.5)   # mean=0, std=0.5m
-            noise_e = np.random.normal(0, 0.5)
+            # noise_n = np.random.normal(0, 0.5)   # mean=0, std=0.5m
+            # noise_e = np.random.normal(0, 0.5)
 
-            cur_n_noisy = cur_n + noise_n
-            cur_e_noisy = cur_e + noise_e
+            # cur_n_noisy = cur_n + noise_n
+            # cur_e_noisy = cur_e + noise_e
 
-            dn = tgt_n - cur_n_noisy
-            de = tgt_e - cur_e_noisy
+            # dn = tgt_n - cur_n_noisy
+            # de = tgt_e - cur_e_noisy
 
             #logger_print('GPS: lat:{:.6f} lon:{:.6f}'.format(gps.latitude_deg, gps.longitude_deg))
 
-            # dn = tgt_n - cur_n
-            # de = tgt_e - cur_e
+            dn = tgt_n - cur_n
+            de = tgt_e - cur_e
             dist_xy = math.hypot(dn, de)
             #logger_print(f" Distance to target XY: {dist_xy:.2f} m")
 
@@ -131,12 +133,12 @@ async def goto_gps_target_modi_2(
             else:
                 vn = ve = 0.0
             
-            if np.random.random() < 0.1:  # 5% chance per cycle
-                gust_n = np.random.uniform(-1.2, 1.2)
-                gust_e = np.random.uniform(-1.2, 1.2)
-                vn += gust_n
-                ve += gust_e
-                logger_print('Wind gust applied')
+            # if np.random.random() < 0.1:  # 5% chance per cycle
+            #     gust_n = np.random.uniform(-1.2, 1.2)
+            #     gust_e = np.random.uniform(-1.2, 1.2)
+            #     vn += gust_n
+            #     ve += gust_e
+            #     logger_print('Wind gust applied')
 
             #logger_print(f"z:{rel_z:.2f}m   XY:{dist_xy:.2f}m  AltErr:{alt_err:.2f}m  vn:{vn:.2f} ve:{ve:.2f} vd:{vd:.2f}")
             await drone.offboard.set_velocity_ned(VelocityNedYaw(vn, ve, vd, 0.0))
@@ -165,6 +167,163 @@ async def goto_gps_target_modi_2(
 
     return True
 
+
+async def goto_gps_target_modi_3(
+    drone,
+    target_lat, target_lon, target_alt,
+    ref_lat, ref_lon, ref_alt,
+    speed_mps=0.8,
+    arrival_thresh=0.5,
+    offset_n=0.0,
+    offset_e=0.0
+):
+    loop_hz = 20
+    vz_clip = 0.65
+    hover_bias = -0.075
+    alt_Kp = 0.4
+
+    # Convert GPS target to NED
+    tgt_n, tgt_e, _ = pm.geodetic2ned(target_lat, target_lon, ref_alt,
+                                      ref_lat, ref_lon, ref_alt)
+    tgt_n += offset_n
+    tgt_e += offset_e
+
+    logger_print(f"Navigating to NED (N:{tgt_n:.2f} E:{tgt_e:.2f}) @ rel Alt:{target_alt:.2f}")
+
+    
+
+
+
+    await drone.offboard.set_velocity_body(VelocityBodyYawspeed(0,0,0,0))
+    await drone.offboard.set_velocity_body(VelocityBodyYawspeed(0,0,0,0))
+    await drone.offboard.set_velocity_body(VelocityBodyYawspeed(0,0,0,0))
+    try:
+        await drone.offboard.start()
+        logger_print("Offboard started")
+    except OffboardError as e:
+        logger_print(f" Offboard start failed: {e}")
+        return False
+    
+    # ------------------------------------------------------
+    # Start watchdog task
+    # ------------------------------------------------------
+    watchdog_task = asyncio.create_task(offboard_watchdog(drone))
+    logger_print("[Watchdog] Started")
+
+    dt = 1.0 / loop_hz
+    try:
+        while True:
+            pv  = await anext(drone.telemetry.position_velocity_ned())
+            gps = await anext(drone.telemetry.position())
+
+            cur_n = pv.position.north_m
+            cur_e = pv.position.east_m
+            rel_z = gps.relative_altitude_m
+
+            # noise_n = np.random.normal(0, 0.5)   # mean=0, std=0.5m
+            # noise_e = np.random.normal(0, 0.5)
+
+            # cur_n_noisy = cur_n + noise_n
+            # cur_e_noisy = cur_e + noise_e
+
+            # dn = tgt_n - cur_n_noisy
+            # de = tgt_e - cur_e_noisy
+
+            #logger_print('GPS: lat:{:.6f} lon:{:.6f}'.format(gps.latitude_deg, gps.longitude_deg))
+
+            dn = tgt_n - cur_n
+            de = tgt_e - cur_e
+            dist_xy = math.hypot(dn, de)
+            #logger_print(f" Distance to target XY: {dist_xy:.2f} m")
+
+            alt_err = target_alt - rel_z
+            vd = -(alt_err * alt_Kp) + hover_bias
+            vd = max(min(vd, vz_clip), -vz_clip)
+
+            if dist_xy < arrival_thresh:
+                #logger_print(" Arrived at target XY & altitude")
+                break
+
+            if dist_xy > 1e-3:
+                vn = (dn / dist_xy) * speed_mps
+                ve = (de / dist_xy) * speed_mps
+            else:
+                vn = ve = 0.0
+            
+            # if np.random.random() < 0.1:  # 5% chance per cycle
+            #     gust_n = np.random.uniform(-1.2, 1.2)
+            #     gust_e = np.random.uniform(-1.2, 1.2)
+            #     vn += gust_n
+            #     ve += gust_e
+            #     logger_print('Wind gust applied')
+
+            #logger_print(f"z:{rel_z:.2f}m   XY:{dist_xy:.2f}m  AltErr:{alt_err:.2f}m  vn:{vn:.2f} ve:{ve:.2f} vd:{vd:.2f}")
+            await drone.offboard.set_velocity_ned(VelocityNedYaw(vn, ve, vd, 0.0))
+            #await asyncio.sleep(dt)
+    except Exception as e:
+        logger_print(f"Navigation error: {e}")
+        watchdog_task.cancel()
+        return False
+
+    await drone.offboard.set_velocity_body(VelocityBodyYawspeed(0,0,0,0))
+    logger_print(" Stopped at target")
+
+    try:
+        await drone.offboard.stop()
+        logger_print("Exited Offboard mode, stopped at target")
+    except Exception as e:
+        logger_print(f"Failed to stop Offboard: {e}")
+
+    # ------------------------------------------------------
+    # CANCEL WATCHDOG (CRITICAL)
+    # ------------------------------------------------------
+    watchdog_task.cancel()
+    logger_print("[Watchdog] Cancelled")
+
+
+    try:
+        logger_print(" Taking a photo at target...")
+        capture_and_save_photo()
+        logger_print(" Photo captured and saved")
+    except Exception as e:
+        logger_print(f"Failed to take photo: {e}")
+
+    return True
+
+async def offboard_watchdog(drone, restart=True, max_restarts=10):
+    
+    restart_count = 0
+
+    try:
+        async for state in drone.telemetry.flight_mode():
+            if state != FlightMode.OFFBOARD:
+                logger_print(f"[Watchdog] Offboard LOST → Now in: {state}")
+
+                if not restart:
+                    continue
+
+                restart_count += 1
+                if restart_count > max_restarts:
+                    logger_print("[Watchdog] Too many restarts → stopping watchdog")
+                    return
+
+                try:
+                    # Safe initial setpoint BEFORE attempting offboard start
+                    await drone.offboard.set_velocity_body(
+                        VelocityBodyYawspeed(0, 0, 0, 0)
+                    )
+                    await drone.offboard.start()
+                    logger_print("[Watchdog] Offboard successfully RESTARTED")
+
+                except Exception as e:
+                    logger_print(f"[Watchdog] Restart failed: {e}")
+
+            await asyncio.sleep(0.1)
+
+    except asyncio.CancelledError:
+        logger_print("[Watchdog] Cancelled safely")
+        return
+    
 def capture_and_save_photo(device="/dev/video0", folder="photo"):
     # Ensure folder exists
     os.makedirs(folder, exist_ok=True)

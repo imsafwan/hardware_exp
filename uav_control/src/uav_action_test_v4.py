@@ -6,7 +6,7 @@ import socket, json, time, os, tempfile, shutil
 from collections import deque
 import asyncio
 from mavsdk import System
-from uav_actions import takeoff, goto_gps_target_modi_2, land, vision_landing
+from uav_actions import takeoff, goto_gps_target_modi_3, land, vision_landing
 import logging
 import datetime
 from gps_logger import record_gps_uav
@@ -217,11 +217,11 @@ async def execute_action(drone, action, ref_lat, ref_lon, ref_alt, offset_n, off
             return await takeoff(drone, altitude=7.0)
 
         elif action_type == "move_to_location":
-            return await goto_gps_target_modi_2(
+            return await goto_gps_target_modi_3(
                 drone,
                 action["location"]["lat"], action["location"]["lon"], 7,
                 ref_lat, ref_lon, ref_alt,
-                speed_mps=0.765, arrival_thresh=0.25,
+                speed_mps=0.9, arrival_thresh=0.25,
                 offset_n=offset_n, offset_e=offset_e
             )
 
