@@ -508,7 +508,7 @@ def main():
     rclpy.init()
     
     # Configuration
-    map_origin = (41.86997, -87.65018899999995)  #  3. (41.870041, -87.650036)   2. (41.86997, -87.65018899999995)   1. #(41.87, -87.650411)
+    map_origin = (41.870041, -87.650036)  #  3. (41.870041, -87.650036)   2. (41.86997, -87.65018899999995)   1. #(41.87, -87.650411)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     actions_yaml = os.path.join(script_dir, '../config/ugv_actions.yaml')
     ugv_runner = UGVActionRunner(actions_yaml, map_origin)

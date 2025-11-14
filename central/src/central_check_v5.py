@@ -248,29 +248,56 @@ def update_scene_yaml(visit_status, file_path="Inputs/scene.yaml"):
 
     nodes = scene["scenario"]["nodes"]
 
-    # Update AOI visit times
+    # -----------------------------------------------------
+    # 1. Update AOI visit times
+    # -----------------------------------------------------
     for k, v in visit_status.items():
         for node in nodes:
             if node["ID"] == k:
                 node["time_last_service"] = float(v)
 
-    # Load UAV actions
+    # -----------------------------------------------------
+    # 2. Load last UAV landing action
+    # -----------------------------------------------------
     with open("output/uav_actions.yaml", "r") as f:
         actions = yaml.safe_load(f)
 
-    # Take last action of sortie_1
     land_act = actions["sortie 1"][-1]
-
-    # Ensure it's a land action
     assert land_act["type"] == "land_on_UGV", f"Unexpected last action: {land_act['type']}"
 
-    # Update agent location to landing point
+    # Update agent position (assuming single agent)
     for agent in scene["agents"]:
-        
-            agent["location"]["x"] = land_act["location"]["lat"]
-            agent["location"]["y"] = land_act["location"]["lon"]
+        agent["location"]["x"] = land_act["location"]["lat"]
+        agent["location"]["y"] = land_act["location"]["lon"]
 
-    # Save back updated scene.yaml
+    # -----------------------------------------------------
+    # 3. Ask user to add new points
+    # -----------------------------------------------------
+    add_new = input("Do you want to add a new point? (Y/N): ").strip().upper()
+
+    while add_new == "Y":
+        print("\nEnter details for the new node:")
+
+        new_id = input("  Node ID: ").strip()
+        new_x = float(input("  X coordinate: "))
+        new_y = float(input("  Y coordinate: "))
+        new_type = input("  Type (air_only/path_only/etc): ").strip()
+
+        new_node = {
+            "ID": new_id,
+            "type": new_type,
+            "location": {"x": new_x, "y": new_y},
+            "time_last_service": 0.0
+        }
+
+        scene["scenario"]["nodes"].append(new_node)
+        print(f"Added new node: {new_node}")
+
+        add_new = input("\nAdd another new point? (Y/N): ").strip().upper()
+
+    # -----------------------------------------------------
+    # 4. Save back updated scene.yaml
+    # -----------------------------------------------------
     with open(file_path, "w") as f:
         yaml.safe_dump(scene, f, sort_keys=False)
 
