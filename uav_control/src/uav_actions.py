@@ -145,7 +145,8 @@ async def goto_gps_target_modi_2(
 
     try:
         logger_print(" Taking a photo at target...")
-        capture_and_send_photo()
+        capture_and_send_photo(target_lat=target_lat,
+        target_lon=target_lon)
         logger_print(" Photo captured and saved")
     except Exception as e:
         logger_print(f"Failed to take photo: {e}")
