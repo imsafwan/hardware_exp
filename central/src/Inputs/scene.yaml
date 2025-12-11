@@ -1,12 +1,12 @@
-ID: state_uicfield3_demo
+ID: state_uicfield_demo
 time: 0.0
 agents:
 - ID: UAV_01
   type: UAV
   subtype: standard
   location:
-      x: 41.870023
-      y: -87.650036
+    x: 41.870069
+    y: -87.650315
   battery_state:
     max_battery_energy: 5.0
     current_battery_energy: 0.0
@@ -14,120 +14,72 @@ agents:
   type: UGV
   subtype: standard
   location:
-      x: 41.870023
-      y: -87.650036
+    x: 41.870069
+    y: -87.650315
 scenario:
-  description: Loading Field for API development
+  description: Auto-generated Search Area Discretization
   type: regular_surveillance
   subtype: standard
   nodes:
   - ID: AOI_1
     type: air_only
     location:
-      x: 41.870049
-      y: -87.650326
+      x: 41.869907738652245
+      y: -87.65035415253358
     time_last_service: 0.0
   - ID: AOI_2
     type: air_only
     location:
-      x: 41.870086
-      y: -87.650351
+      x: 41.87002121791905
+      y: -87.65035530279815
     time_last_service: 0.0
   - ID: AOI_3
     type: air_only
     location:
-      x: 41.870148
-      y: -87.650338
+      x: 41.870134697183566
+      y: -87.6503564530693
     time_last_service: 0.0
   - ID: AOI_4
     type: air_only
     location:
-      x: 41.870178
-      y: -87.650277
+      x: 41.86990884388847
+      y: -87.65015895169384
     time_last_service: 0.0
   - ID: AOI_5
     type: air_only
     location:
-      x: 41.870190
-      y: -87.650200
+      x: 41.87002232315965
+      y: -87.65016010161321
     time_last_service: 0.0
   - ID: AOI_6
     type: air_only
     location:
-      x: 41.870154
-      y: -87.650122
-    time_last_service: 0.0
-  - ID: AOI_7
-    type: air_only
-    location:
-      x: 41.870134
-      y: -87.650066
-    time_last_service: 0.0
-  - ID: AOI_8
-    type: air_only
-    location:
-      x: 41.870076
-      y: -87.650035
-    time_last_service: 0.0
-  - ID: AOI_9
-    type: air_only
-    location:
-      x: 41.869963
-      y: -87.650171
-    time_last_service: 0.0
-  - ID: AOI_10
-    type: air_only
-    location:
-      x: 41.869987
-      y: -87.650220
+      x: 41.870135802428535
+      y: -87.65016125153917
     time_last_service: 0.0
   - ID: rnp1
     type: road
     location:
-      x: 41.870023
-      y: -87.650036
+      x: 41.870069
+      y: -87.650315
     time_last_service: 0.0
   - ID: rnp2
     type: road
     location:
-      x: 41.870036
-      y: -87.650068
+      x: 41.870057
+      y: -87.650281
     time_last_service: 0.0
   - ID: rnp3
     type: road
     location:
       x: 41.870044
-      y: -87.650101
+      y: -87.650249
     time_last_service: 0.0
   - ID: rnp4
     type: road
     location:
-      x: 41.870053
-      y: -87.650133
-    time_last_service: 0.0
-  - ID: rnp5
-    type: road
-    location:
-      x: 41.870063
-      y: -87.650161
-    time_last_service: 0.0
-  - ID: rnp6
-    type: road
-    location:
-      x: 41.870074
-      y: -87.650190
-    time_last_service: 0.0
-  - ID: rnp7
-    type: road
-    location:
-      x: 41.870084
-      y: -87.650212
-    time_last_service: 0.0
-  - ID: rnp8
-    type: road
-    location:
-      x: 41.870096
-      y: -87.650241
+      x: 41.870024
+      y: -87.650205
     time_last_service: 0.0
   connections:
   - end1: rnp1
@@ -136,11 +88,3 @@ scenario:
     end2: rnp3
   - end1: rnp3
     end2: rnp4
-  - end1: rnp4
-    end2: rnp5
-  - end1: rnp5
-    end2: rnp6
-  - end1: rnp6
-    end2: rnp7
-  - end1: rnp7
-    end2: rnp8
