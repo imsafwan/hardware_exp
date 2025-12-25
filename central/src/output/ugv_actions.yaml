@@ -1,0 +1,7 @@
+sortie 1:
+- type: allow_take_off_from_UGV
+  location:
+    lat: 41.870065
+    lon: -87.650315
+  ins_id: take_off_1
+  end_time: 12

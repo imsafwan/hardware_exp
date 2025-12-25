@@ -1,0 +1,16 @@
+{
+  "AOI_1": "COMPLETED",
+  "AOI_2": "COMPLETED",
+  "AOI_3": "COMPLETED",
+  "AOI_4": "COMPLETED",
+  "AOI_5": "COMPLETED",
+  "AOI_6": "COMPLETED",
+  "AOI_7": "COMPLETED",
+  "AOI_8": "COMPLETED",
+  "AOI_9": "COMPLETED",
+  "AOI_10": "COMPLETED",
+  "AOI_11": "COMPLETED",
+  "rnp3": "COMPLETED",
+  "rnp4": "COMPLETED",
+  "rnp2": "COMPLETED"
+}

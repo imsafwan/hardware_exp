@@ -1,0 +1,23 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+log/
+*.log
+
+# Temp status/runtime files
+tmp/
+
+rosbag/
+
+# Virtual environments
+venv/
+.env/
+
+# OS / editor files
+.DS_Store
+*.swp
+*.swo

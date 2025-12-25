@@ -1,0 +1,15 @@
+sortie 1:
+- type: takeoff_from_UGV
+  location:
+    lat: 41.870065
+    lon: -87.650315
+  ins_id: take_off_1
+  aoi_id: rnp2
+  end_time: 12
+- type: move_to_location
+  location:
+    lat: 41.87
+    lon: -87.65045
+  ins_id: move_0
+  aoi_id: AOI_1
+  end_time: 26.96

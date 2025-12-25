@@ -1,0 +1,120 @@
+ID: state_uicfield_demo
+time: 0.0
+agents:
+- ID: UAV_01
+  type: UAV
+  subtype: standard
+  location:
+    x: 41.870079
+    y: -87.650369
+  battery_state:
+    max_battery_energy: 5.0
+    current_battery_energy: 0.0
+- ID: UGV_01
+  type: UGV
+  subtype: standard
+  location:
+    x: 41.870079
+    y: -87.650369
+scenario:
+  description: Auto-generated Search Area Discretization
+  type: regular_surveillance
+  subtype: standard
+  nodes:
+  - ID: AOI_1
+    type: air_only
+    location:
+      x: 41.87
+      y: -87.65045
+    time_last_service: 0.0
+  - ID: AOI_2
+    type: air_only
+    location:
+      x: 41.870072
+      y: -87.65045
+    time_last_service: 0.0
+  - ID: AOI_3
+    type: air_only
+    location:
+      x: 41.869929
+      y: -87.650329
+    time_last_service: 0.0
+  - ID: AOI_4
+    type: air_only
+    location:
+      x: 41.870001
+      y: -87.650329
+    time_last_service: 0.0
+  - ID: AOI_5
+    type: air_only
+    location:
+      x: 41.870073
+      y: -87.65033
+    time_last_service: 0.0
+  - ID: AOI_6
+    type: air_only
+    location:
+      x: 41.870145
+      y: -87.650331
+    time_last_service: 0.0
+  - ID: AOI_7
+    type: air_only
+    location:
+      x: 41.869929
+      y: -87.650208
+    time_last_service: 0.0
+  - ID: AOI_8
+    type: air_only
+    location:
+      x: 41.870001
+      y: -87.650209
+    time_last_service: 0.0
+  - ID: AOI_9
+    type: air_only
+    location:
+      x: 41.870073
+      y: -87.650209
+    time_last_service: 0.0
+  - ID: AOI_10
+    type: air_only
+    location:
+      x: 41.870145
+      y: -87.65021
+    time_last_service: 0.0
+  - ID: AOI_11
+    type: air_only
+    location:
+      x: 41.870074
+      y: -87.650089
+    time_last_service: 0.0
+  - ID: rnp1
+    type: road
+    location:
+      x: 41.870079
+      y: -87.650369
+    time_last_service: 0.0
+  - ID: rnp2
+    type: road
+    location:
+      x: 41.870065
+      y: -87.650315
+    time_last_service: 0.0
+  - ID: rnp3
+    type: road
+    location:
+      x: 41.870055
+      y: -87.650279
+    time_last_service: 0.0
+  - ID: rnp4
+    type: road
+    location:
+      x: 41.870041
+      y: -87.650225
+    time_last_service: 0.0
+  connections:
+  - end1: rnp1
+    end2: rnp2
+  - end1: rnp2
+    end2: rnp3
+  - end1: rnp3
+    end2: rnp4
